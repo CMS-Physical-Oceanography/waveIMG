@@ -1,0 +1,38 @@
+Current processing/work-flow:
+
+1a) image frames at 2.5Hz from .mp4 (/home/derek/matlab/CiaraDooley/import_rod13.m & rectify_vd.m)
+1b) map from image (u,v) to (oceanX,oceanY) grid as grey-scale with double-precision
+1c) save variables oceanX, oceanY, ocean==images in a .mat binary file
+
+scripts for the following are in: /home/derek/projects/ShortCrests/IMG/mfiles/
+associated data is house in: /data0/ShortCrests/IMG/
+2)  pre-process gray-scale (prep_full_IMG_fronts.m)
+2a) estimate pixel intensity variance and threshold to mask beach or non-varying regions.
+2b) estimate 5-minute intensity pdf, identify the threshold between foam and water
+2c) estimate wave period/number, and celerity via fft on (x,t) time-stacks
+2d) re-scale the image intensities to center pdf on the foam threshold
+2e) save re-scaled image as unsigned 8-bit integer [0 255]
+
+3) extract training data for pixel-based neural network (ManualFrontExtraction_v2.mlapp)
+3a) user selects either front or nonFront pixels, and surrounding (Ny,Nx,Nt) = (64,32,3) image points are logged in training images files:
+    /data0/ShortCrests/data/trainingImages/#/*_mmdd_hhmmss_imNum_rowNum_colNum.png
+
+where # is either 0         or 1
+where * iw either nonFronts or front (0=nonFront images & 1=front images)
+
+3b) neural network training (make_IMG_CNN.m) creates and trains the pixel-network. The current version is:
+/data0/ShortCrests/mat_data/imgNet_v5.mat
+
+4) The neural network was applied pixel-by-pixel to images from 09/28, 09/29, 09/30, 10/14, 10/18 (master_neural_network_parallel.m), and it takes a long time!
+
+4b) The pixel-based network had several false positive classifications. Pixels from these regions were selected to re-train the model (ManualFrontExtractionForRetraining.mlapp). the current version imgNet_v5.mat includes the retraing data.
+
+4c) the pixel-by-pixel network was re-applied to the above days. It performed well, but took forever.
+
+5a) A full-image neural network was trained using the output from (4c) as training data. This classifies a full image scene in (512,256) resolution in <5 seconds.
+
+
+
+Now we want to create a workflow that begins with selecting a training set where the user generates the data in (4c) that is used in (5a)--cutting out steps (3)-(4b). I also want to streamline the code implementation to smoothly go from steps (1)-(5), and put it in the git-hub.
+
+
