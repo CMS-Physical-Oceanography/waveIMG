@@ -36,3 +36,4 @@ where * iw either nonFronts or front (0=nonFront images & 1=front images)
 Now we want to create a workflow that begins with selecting a training set where the user generates the data in (4c) that is used in (5a)--cutting out steps (3)-(4b). I also want to streamline the code implementation to smoothly go from steps (1)-(5), and put it in the git-hub.
 
 
+Hi EJ. 
