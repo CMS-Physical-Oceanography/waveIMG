@@ -16,9 +16,9 @@ for i = 1:size(OCMdandt, 1)
     for j = 1:length(t)
         tag{cnt} = ['ROD13_' d '_' t{j}];
         % CHANGE TO YOUR IMPORT DIRECTORY
-        importDir{cnt} = ['/data0/ShortCrests/IMG/data/' d filesep t{j}];
+        importDir{cnt} = ['../data/' d filesep t{j}]; 
         % CHANGE TO WHEREVER YOU WANT THE DATA TO SAVE
-        workingDir{cnt}= ['/data0/ShortCrests/IMG/data/' d]; 
+        workingDir{cnt}= ['../data/' d]; 
         cnt = cnt + 1;
     end
 end
