@@ -1,5 +1,5 @@
 % top folder yyyymmdd and subfolder HHMM
-OCMdandt = {'20130929', {'1100'}};
+OCMdandt = {'20130929', {'1100','1200','1300','1400'}};
 % get a tally of the number of subfolders in each top folder
 OCMnumfiles = 0;
 for i = 1:size(OCMdandt, 1)

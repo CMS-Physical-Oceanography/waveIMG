@@ -35,12 +35,15 @@ where * iw either nonFronts or front (0=nonFront images & 1=front images)
 
 
 Goal:
-Now we want to create a workflow that begins with selecting a training set where the user generates the data in (4c) that is used in (5a)--cutting out steps (3)-(4b). I also want to streamline the code implementation to smoothly go from steps (1)-(5), and put it in the git-hub.
+Now we want to create a workflow that begins with selecting a training set where the user generates the data in (4c) that is used in (5a)--cutting out steps (1b)-(4b). I also want to streamline the code implementation to smoothly go from steps (1)-(5), and put it in the git-hub.
 
 
 To do:
 1) create a new matlab-app for training data
-   -load and rectify image frame from the movie (.avi or .mp4)
+   -load and rectify image frame from the movie (.avi or .mp4): import_rod13.m (where are the all video files) & rectify_vd.m (rectify each frame of each video file)
+    -- user inputs a file or a variable with:
+       --- camera intrinsic/extrinsic parametrs (getCameraParams.m)
+       --- video parameters (getOCMparams.m)
    -display an image and qeary user to select ROI surrounding fronts
    -create a training image/label pair for the neural network 
     -- create an image array for current frame:

@@ -31,7 +31,7 @@ if strcmp(ID, 'v00')
 elseif strcmp(ID, 'rod13')
     %RODSEX2013
     %import
-    paramsOCM.imp_format = 'mp4';
+    paramsOCM.imp_format = 'avi';% the original videos are 'mp4';
     
     %grid
     paramsOCM.ocm_freq = 2.5;     %[Hz]
