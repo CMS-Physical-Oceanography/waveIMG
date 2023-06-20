@@ -21,14 +21,14 @@ fullPath = fullPath'
 %
 %tag = cell(OCMnumfiles,1);
 %importDir = cell(OCMnumfiles,1);
-%workingDir = cell(OCMnumfiles,1);
-%cnt = 1;
+workingDir = cell(OCMnumfiles,1);
+cnt = 1;
 %for i = 1:size(OCMdandt, 1)
     %d = OCMdandt{i, 1};
     %t = OCMdandt{i, 2};
     for ii = 1:length(fullPath)
-        tag{ii} = ['testing_',num2str(ii)]; %tag incriment
-        importDir{ii} = string(fullPath{ii}) %have to convert each path to string for rectify
+        ['testing_',num2str(ii)];
+        importDir{ii} = fullPath
         workingDir{ii} = [fullPath{ii},filesep,'..',filesep]
     end
     %for j = 1:length(t)
