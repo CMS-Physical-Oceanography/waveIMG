@@ -36,8 +36,8 @@ create a new matlab-app for training data:
       ```
       trainingFrame = imresize( frame(:,:,t) , [512 255]);
       ```
-	    - make sure you also resize (x,y)
-            - make sure the class is uint8
+		- make sure you also resize (x,y)
+	    	- make sure the class is uint8
       - [ ] generate false color RGB training image by concatenating together three trainingImages;
       ```
       trainingImage = cat(3,traningFrame(:,:,t-dt),traningFrame(:,:,t),traningFrame(:,:,t+dt))
