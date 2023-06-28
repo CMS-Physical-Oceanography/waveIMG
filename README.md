@@ -33,9 +33,9 @@ create a new matlab-app for training data:
    4) archive training image/label pairs
       - [ ] use image origin directory and filename to create a training image/label filename
       - [ ] \(may do this sooner) resize the images to [512x255]; *e.g.*,
-           ```
-	   trainingFrame = imresize( frame(:,:,t) , [512 255]);
-	   ```
+      ```
+      trainingFrame = imresize( frame(:,:,t) , [512 255]);
+      ```
 	    - make sure you also resize (x,y)
             - make sure the class is uint8;
       - [ ] generate false color RGB training image by concatenating together three trainingImages;
