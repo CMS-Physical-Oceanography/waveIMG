@@ -39,9 +39,9 @@ create a new matlab-app for training data:
 	    - make sure you also resize (x,y)
             - make sure the class is uint8;
       - [ ] generate false color RGB training image by concatenating together three trainingImages;
-           ```
-	   trainingImage = cat(3,traningFrame(:,:,t-dt),traningFrame(:,:,t),traningFrame(:,:,t+dt))
-	   ```
+      ```
+      trainingImage = cat(3,traningFrame(:,:,t-dt),traningFrame(:,:,t),traningFrame(:,:,t+dt))
+      ```
       - [ ] the images should be in a subdirectory called `trainingImages/`; labels should be in `trainingLabels/`
       - [ ] also keep a running log of the input image path, the frame number, and pixels used to make training labels
 
