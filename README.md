@@ -9,7 +9,7 @@ create a new matlab-app for training data:
       - [x] current directory drop-down selector for multiple video sub-directories
       - [ ] need call-back to update filenames when user selects a different sub-dir; anything else? 
       - [x] current filename drop-down selector for multiple videos in each sub-directory
-      - [ ]\(do this later) will likely need call-backs to re-initialize video loading and rectification .
+      - [ ] \(do this later) will likely need call-backs to re-initialize video loading and rectification .
    2) load and rectify image frames from the selected movie (.avi or .mp4; was 'rectify_vd.m'):
       - [ ] extract relevant variables/values from 'getCameraParams.m' and 'getOCMparams.m'
       - [ ] \(do this later) add an option for user to point to manually input values, direct to a .mat file with values.
