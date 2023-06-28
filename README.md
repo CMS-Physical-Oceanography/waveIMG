@@ -27,9 +27,9 @@ create a new matlab-app for training data:
       - [ ] use these points to create a training label image where:
             - the size [rows,columns]=[ny,nx] of the label matches the rectified image
 	    - the label is class uint8() and has values:
-	      -- 0 in the black bordering region outside the actual image
-	      -- 127 for non-breaking wave regions (beach, water, or trailing foam)
-	      -- 255 for points/regions selected by user
+	      - 0 in the black bordering region outside the actual image
+	      - 127 for non-breaking wave regions (beach, water, or trailing foam)
+	      - 255 for points/regions selected by user
    4) archive training image/label pairs
       - [ ] use image origin directory and filename to create a training image/label filename
       - [ ] \(may do this sooner) resize the images to [512x255]; *e.g.*,
@@ -37,7 +37,7 @@ create a new matlab-app for training data:
       trainingFrame = imresize( frame(:,:,t) , [512 255]);
       ```
 	    - make sure you also resize (x,y)
-            - make sure the class is uint8;
+            - make sure the class is uint8
       - [ ] generate false color RGB training image by concatenating together three trainingImages;
       ```
       trainingImage = cat(3,traningFrame(:,:,t-dt),traningFrame(:,:,t),traningFrame(:,:,t+dt))
