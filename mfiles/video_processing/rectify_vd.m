@@ -1,7 +1,7 @@
-function [ocean,oceanSum,oceanX,oceanY,infoOCM] = rectify_vd(tag,workingDir,importDir,expID)
+function [ocean,oceanSum,oceanX,oceanY,infoOCM] = rectify_vd(workingDir,importDir,expID)
 
 [infoOCM] = getOCMparams(expID);  %get analysis parameters
-infoOCM.tag = tag;
+%infoOCM.tag = tag;
 infoOCM.workingDir = workingDir;
 infoOCM.importDir = importDir;
 infoOCM.expID = expID;
@@ -9,10 +9,12 @@ infoOCM.expID = expID;
 fprintf('\n processing video directory %s \n',importDir)
 
 %% PREPARE IMAGES
-[icp, beta0] = getCameraParams(infoOCM.expID); %import camera info
+%[icp, beta0] = getCameraParams(infoOCM.expID); %import camera info
+[info, icp, beta0] = define_camera_parameters()
+keyboard
 [U, V] = meshgrid(0:icp.NU-1, 0:icp.NV-1);  %find U, V coordinates
 
-imp_source = dir(strcat(infoOCM.importDir, '/*.', infoOCM.imp_format)); %find all videos in source folder
+imp_source = dir(strcat(infoOCM.importDir, filesep,'*.', infoOCM.imp_format)); %find all videos in source folder
 
 %check for bad files
 dot = 1;
@@ -24,10 +26,10 @@ while dot < length(imp_source)
 end
 
 imp_name = {imp_source.name}';  %cell array of video names
-imp_read = strcat({imp_source.folder},'/',{imp_source.name})';  %string of each video location
+imp_read = strcat({imp_source.folder},filesep,{imp_source.name})';  %string of each video location
 
-time_source = dir(strcat(infoOCM.importDir, '/*.', 'xml')); %find all videos in source folder
-time_read = strcat({time_source.folder},'/',{time_source.name})';  %string of each video location
+time_source = dir(strcat(infoOCM.importDir, filesep,'*.', 'xml')); %find all videos in source folder
+time_read = strcat({time_source.folder},filesep,{time_source.name})';  %string of each video location
 
 vd = VideoReader(imp_read{1});
 
@@ -69,13 +71,14 @@ for j = 1:length(imp_read)
     for ii = 1:M %loop through image set
         oceanRaw = double(rgb2gray(read(vd,frms(ii))));    %read in image
         ocean(:,:,ii) = interp2(U, V, oceanRaw, Ustp, Vstp, 'linear', nan);
+        keyboard
     end
     %sum images into composite
     oceanSum = sum(ocean,3);
 
     %save results
-    save(strcat(infoOCM.workingDir,'/rawData_OCM_',infoOCM.tag,'_',imp_name{j}(1:end-4),'.mat'),'ocean','oceanSum','oceanX','oceanY','-v7.3')
-    save(strcat(infoOCM.workingDir,'/timex_OCM_',infoOCM.tag,'_',imp_name{j}(1:end-4),'.mat'),'oceanSum','oceanX','oceanY')
+    save(strcat(infoOCM.workingDir,filesep,'rawData_OCM_',infoOCM.tag,'_',imp_name{j}(1:end-4),'.mat'),'ocean','oceanSum','oceanX','oceanY','-v7.3')
+    save(strcat(infoOCM.workingDir,filesep,'timex_OCM_',infoOCM.tag,'_',imp_name{j}(1:end-4),'.mat'),'oceanSum','oceanX','oceanY')
 end
 
 end
