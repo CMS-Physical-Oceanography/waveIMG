@@ -1,15 +1,18 @@
-% subdirectories
-
+% build structures with video, grid, and camera info
+%
 % video info
 info.format = 'avi';
 info.freq   = 2.5;
-% grid info
-info.X_res = 0.2;
-info.Y_res = 0.2000
+% grid info 
 info.X_min = 75
 info.X_max = 250
 info.Y_min = 590
 info.Y_max = 1000
+% estimate grid resolution based on network size
+info.Nx    = 256;
+info.Ny    = 512;
+info.X_res = (info.X_max-info.X_min)/(info.Nx-1);
+info.Y_res = (info.Y_max-info.Y_min)/(info.Ny-1);
 % other info
 info.Al_bar = 10;
 info.Cs_bar = 10
@@ -23,29 +26,49 @@ info.maxskew = 2
 info.minent = 6
 
 
-
-% camera intrinsic parameters
+%% define camera intrinsic parameters
+% see CIRN-toolbox for calibration procedure
 icp.PixelFormat = 'RGB';
-BitDepth =  24
-FrameRate =  5
-NU = 2048
-NV = 1536
-c0U = 1.0903e+03
-c0V = 797.5000
-fx = 1.9518e+03
-fy = 1953
-d1 = -0.3826
-d2 = 0.2136
-d3 = -0.0815
-t1 = 5.0000e-05
-t2 = 3.0690e-04
-ac = 8.5330e-04
-r = [0 1.0000e-03 0.0020 0.0030 0.0040 0.0050 0.0060 0.0070 0.0080 0.0090 0.0100 0.0110 0.0120 … ]
-fr = [1 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 1.0000 0.9999 … ]
-x = [-1.5000 -1.4000 -1.3000 -1.2000 -1.1000 -1 -0.9000 -0.8000 -0.7000 -0.6000 -0.5000 -0.4000 … ]
-y = [-1.3000 -1.2000 -1.1000 -1 -0.9000 -0.8000 -0.7000 -0.6000 -0.5000 -0.4000 -0.3000 -0.2000 … ]
-dx = [27×31 double]
-dy = [27×31 double]
-
-% extrinsic camera parameters
+icp.BitDepth =  24
+icp.FrameRate =  5
+icp.NU = 2048
+icp.NV = 1536
+icp.c0U = 1.0903e+03
+icp.c0V = 797.5000
+icp.fx = 1.9518e+03
+icp.fy = 1953
+icp.d1 = -0.3826
+icp.d2 = 0.2136
+icp.d3 = -0.0815
+icp.t1 = 5.0000e-05
+icp.t2 = 3.0690e-04
+icp.ac = 8.5330e-04
+%
+%% estimate camera radial distortion coefficients
+icp = makeRadialDistortion(icp)
+% $$$ r = 0: 0.001: 2;   % max tan alpha likely to see.
+% $$$ r2 = r.*r;
+% $$$ fr = 1 + icp.d1*r2 + icp.d2*r2.*r2 + icp.d3*r2.*r2.*r2;
+% $$$ % limit to increasing r-distorted (no folding back)
+% $$$ rd = r.*fr;
+% $$$ good = diff(rd)>0;      
+% $$$ icp.r = r(good);
+% $$$ icp.fr = fr(good);
+%% estimate camera tangental distortion parameters
+icp = makeTangentialDistortion(icp);
+% $$$ % This is taken from the Caltech cam cal docs.  
+% $$$ xmax = 1.5;     % no idea if this is good
+% $$$ dx = 0.1;
+% $$$ ymax = 1.3;
+% $$$ dy = 0.1;
+% $$$ %
+% $$$ icp.x = -xmax: dx: xmax;
+% $$$ icp.y = -ymax: dy: ymax;
+% $$$ [X,Y] = meshgrid(icp.x,icp.y);
+% $$$ X  = X(:); Y = Y(:);
+% $$$ r2 = X.*X + Y.*Y;
+% $$$ icp.dx = reshape(2*icp.t1*X.*Y + icp.t2*(r2+2*X.*X),[],length(icp.x));
+% $$$ icp.dy = reshape(icp.t1*(r2+2*Y.*Y) + 2*icp.t2*X.*Y,[],length(icp.x));
+%
+% extrinsic camera parameters (requires several steps within CIRN-toolbox)
 beta0 = [35.0911  585.0288   42.4419   72.1536    0.1974   44.8175];
