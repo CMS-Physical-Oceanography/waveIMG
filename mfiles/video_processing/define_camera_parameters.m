@@ -1,6 +1,4 @@
-function [info,icp,beta0] = define_camera_parameters()
-% subdirectories
-
+function [info,icp,beta0] = define_camera_parameters();
 % build structures with video, grid, and camera info
 %
 % video info
