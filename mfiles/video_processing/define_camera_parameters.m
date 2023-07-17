@@ -5,10 +5,10 @@ function [info,icp,beta0] = define_camera_parameters();
 info.format = 'avi';
 info.freq   = 2.5;
 % grid info 
-info.X_min = 75
-info.X_max = 250
-info.Y_min = 590
-info.Y_max = 1000
+info.X_min = 75;
+info.X_max = 250;
+info.Y_min = 590;
+info.Y_max = 1000;
 % estimate grid resolution based on network size
 info.Nx    = 256;
 info.Ny    = 512;
@@ -16,37 +16,37 @@ info.X_res = (info.X_max-info.X_min)/(info.Nx-1);
 info.Y_res = (info.Y_max-info.Y_min)/(info.Ny-1);
 % other info
 info.Al_bar = 10;
-info.Cs_bar = 10
-info.X_gap = []
-info.Y_gap = []
-info.vel_bnd = [-2 2]
-info.wndw = 20
-info.stp = 10
-info.minvar = 100
-info.maxskew = 2
-info.minent = 6
+info.Cs_bar = 10;
+info.X_gap = [];
+info.Y_gap = [];
+info.vel_bnd = [-2 2];
+info.wndw = 20;
+info.stp = 10;
+info.minvar = 100;
+info.maxskew = 2;
+info.minent = 6;
 
 
 %% define camera intrinsic parameters
 % see CIRN-toolbox for calibration procedure
 icp.PixelFormat = 'RGB';
-icp.BitDepth =  24
-icp.FrameRate =  5
-icp.NU = 2048
-icp.NV = 1536
-icp.c0U = 1.0903e+03
-icp.c0V = 797.5000
-icp.fx = 1.9518e+03
-icp.fy = 1953
-icp.d1 = -0.3826
-icp.d2 = 0.2136
-icp.d3 = -0.0815
-icp.t1 = 5.0000e-05
-icp.t2 = 3.0690e-04
-icp.ac = 8.5330e-04
+icp.BitDepth =  24;
+icp.FrameRate =  5;
+icp.NU = 2048;
+icp.NV = 1536;
+icp.c0U = 1.0903e+03;
+icp.c0V = 797.5000;
+icp.fx = 1.9518e+03;
+icp.fy = 1953;
+icp.d1 = -0.3826;
+icp.d2 = 0.2136;
+icp.d3 = -0.0815;
+icp.t1 = 5.0000e-05;
+icp.t2 = 3.0690e-04;
+icp.ac = 8.5330e-04;
 %
 %% estimate camera radial distortion coefficients
-icp = makeRadialDistortion(icp)
+icp = makeRadialDistortion(icp);
 % $$$ r = 0: 0.001: 2;   % max tan alpha likely to see.
 % $$$ r2 = r.*r;
 % $$$ fr = 1 + icp.d1*r2 + icp.d2*r2.*r2 + icp.d3*r2.*r2.*r2;
