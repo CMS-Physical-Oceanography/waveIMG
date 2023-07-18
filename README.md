@@ -24,6 +24,7 @@ create a new matlab-app for training data:
             - stop on final image and prompt user to select breaking regions
    3) select points bounding the breaking wave fronts
       - [ ] use function like `drawfreehand.m` to select points using mouse
+      - [ ] keep a log with: video filename, the app.info video/grid parameters, frame number, and front pixel row/column,
       - [ ] use these points to create a training label image where:
             - the size [rows,columns]=[ny,nx] of the label matches the rectified image
 	    - the label is class uint8() and has values:
