@@ -1,6 +1,13 @@
 # waveIMG
 workflow for identifying breaking waves in surfzone video/imagery
 
+## How to use program:
+- Make sure you are in the mfiles directory when you run it
+- Put the files you need in the data folder if you want it to auto load the files in the app
+   - if not then select the folder that the files are in when you hit the select video files button
+
+
+
 
 ## To Do:
 create a new matlab-app for training data:
