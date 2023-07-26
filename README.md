@@ -32,7 +32,7 @@ create a new matlab-app for training data:
    3) select points bounding the breaking wave fronts
       - [x] use function like `drawfreehand.m` to select points using mouse
       - [ ] keep a log with: video filename, the app.info video/grid parameters, frame number, and front pixel row/column,
-            - add call-back for the "save & continue" button
+	    - add call-back for the "save & continue" button
             - check that you can save multiple ROIs for a single frame
             - select multiple ROIs, click save, on a new frame select more ROIs and save. Does it work?
             - make sure it works when there is or isn't an existing "WaveImageSpecs.mat" file.
