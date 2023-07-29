@@ -31,7 +31,7 @@ create a new matlab-app for training data:
             - stop on final image and prompt user to select breaking regions
    3) select points bounding the breaking wave fronts
       - [x] use function like `drawfreehand.m` to select points using mouse
-      - [ ] keep a log with: video filename, the app.info video/grid parameters, frame number, and front pixel row/column,
+      - [x] keep a log with: video filename, the app.info video/grid parameters, frame number, and front pixel row/column,
 	    - add call-back for the "save & continue" button
             - check that you can save multiple ROIs for a single frame
             - select multiple ROIs, click save, on a new frame select more ROIs and save. Does it work?
