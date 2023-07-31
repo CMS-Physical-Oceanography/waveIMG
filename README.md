@@ -12,8 +12,9 @@ workflow for identifying breaking waves in surfzone video/imagery
 ## To Do:
 create a new matlab-app for training data:
    0) figure/axes properties
-      - [ ] make application window open to full screen. ```drawnow; app.UIFigure.WindowState = 'maximized';```
-      - [ ] make the plot axes look nice.
+   	- [ ] make application window open to full screen. 
+    ```drawnow; app.UIFigure.WindowState = 'maximized';```
+    	- [ ] make the plot axes look nice.
    1) get list of video-files (*i.e.*, path & filename; was `import_rod13.m`):
       - [x] prompt user to highlight directories where the vidoe files are located
       - [x] current directory drop-down selector for multiple video sub-directories
