@@ -11,17 +11,17 @@ workflow for identifying breaking waves in surfzone video/imagery
 
 ## To Do:
 create a new matlab-app for training data:
-   0) figure/axes properties
+   1) figure/axes properties
    	- [ ] make application window open to full screen. 
     ```drawnow; app.UIFigure.WindowState = 'maximized';```
     	- [ ] make the plot axes look nice.
-   1) get list of video-files (*i.e.*, path & filename; was `import_rod13.m`):
+   2) get list of video-files (*i.e.*, path & filename; was `import_rod13.m`):
       - [x] prompt user to highlight directories where the vidoe files are located
       - [x] current directory drop-down selector for multiple video sub-directories
       - [x] need call-back to update filenames when user selects a different sub-dir; anything else? 
       - [x] current filename drop-down selector for multiple videos in each sub-directory
       - [ ] \(do this later) will likely need call-backs to re-initialize video loading and rectification.
-   2) load and rectify image frames from the selected movie (.avi or .mp4; was `rectify_vd.m`):
+   3) load and rectify image frames from the selected movie (.avi or .mp4; was `rectify_vd.m`):
       - [x] extract relevant variables/values from `getCameraParams.m` and `getOCMparams.m`
       - [ ] \(do this later) add an option for user to point to manually input values, direct to a .mat file with values.
       - [x] read in a video frame
@@ -34,7 +34,7 @@ create a new matlab-app for training data:
 	    - display using imagesc(x,y,frame)
 	    - use a for-loop to show several frames (maybe 10) and make it like a movie using the `pause.m` command
             - stop on final image and prompt user to select breaking regions
-   3) select points bounding the breaking wave fronts
+   4) select points bounding the breaking wave fronts
       - [x] use function like `drawfreehand.m` to select points using mouse
       - [x] keep a log with: video filename, the app.info video/grid parameters, frame number, and front pixel row/column,
 	    - add call-back for the "save & continue" button
@@ -47,7 +47,7 @@ create a new matlab-app for training data:
 	      - 0 in the black bordering region outside the actual image
 	      - 127 for non-breaking wave regions (beach, water, or trailing foam)
 	      - 255 for points/regions selected by user
-   4) archive training image/label pairs
+   5) archive training image/label pairs
       - [ ] use image origin directory and filename to create a training image/label filename
       - [ ] \(may do this sooner) resize the images to [512x255]; *e.g.*,
       ```
