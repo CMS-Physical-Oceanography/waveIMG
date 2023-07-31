@@ -48,17 +48,10 @@ create a new matlab-app for training data:
 	      - 127 for non-breaking wave regions (beach, water, or trailing foam)
 	      - 255 for points/regions selected by user
    6) archive training image/label pairs
-      - [ ] use image origin directory and filename to create a training image/label filename
-      - [ ] \(may do this sooner) resize the images to [512x255]; *e.g.*,
-      ```
-      trainingFrame = imresize( frame(:,:,t) , [512 255]);
-      ```
-		- make sure you also resize (x,y)
-	    	- make sure the class is uint8
-      - [ ] generate false color RGB training image by concatenating together three trainingImages;
-      ```
-      trainingImage = cat(3,traningFrame(:,:,t-dt),traningFrame(:,:,t),traningFrame(:,:,t+dt))
-      ```
+      - [ ] use video filename and frame number saved in the log structure as image/label filename
+      - [ ] create a uint8 label, called app.LBL, that is the same ```size(app.IMG)``` rows and columns.
+      - [ ] the black regions should be given a value of 0, non-front regions a value of 127, and front pixels = 255.
+      - [ ] when user clicks "save and continue" the labels should be overlain on the image and displayed. Use ```labeloverlay``` function. You may have to change the data-type from uint8 to catagorical. 
       - [ ] the images should be in a subdirectory called `trainingImages/`; labels should be in `trainingLabels/`
       - [ ] also keep a running log of the input image path, the frame number, and pixels used to make training labels
 
