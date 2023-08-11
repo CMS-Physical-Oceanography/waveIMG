@@ -12,7 +12,7 @@ workflow for identifying breaking waves in surfzone video/imagery
 ## To Do:
 create a new matlab-app for training data:
    1) figure/axes properties:
-      - [ ] make application window open to full screen. 
+      - [x] make application window open to full screen. 
     ```drawnow; app.UIFigure.WindowState = 'maximized';```
       - [ ] make the plot axes look nice.
    3) get list of video-files (*i.e.*, path & filename; was `import_rod13.m`):
@@ -41,19 +41,23 @@ create a new matlab-app for training data:
             - check that you can save multiple ROIs for a single frame
             - select multiple ROIs, click save, on a new frame select more ROIs and save. Does it work?
             - make sure it works when there is or isn't an existing "WaveImageSpecs.mat" file.
-      - [ ] use these points to create a training label image where:
+      - [x] use these points to create a training label image where:
             - the size [rows,columns]=[ny,nx] of the label matches the rectified image
 	    - the label is class uint8() and has values:
 	      - 0 in the black bordering region outside the actual image
 	      - 127 for non-breaking wave regions (beach, water, or trailing foam)
 	      - 255 for points/regions selected by user
    6) archive training image/label pairs
-      - [ ] use video filename and frame number saved in the log structure as image/label filename
-      - [ ] create a uint8 label, called app.LBL, that is the same ```size(app.IMG)``` rows and columns.
-      - [ ] the black regions should be given a value of 0, non-front regions a value of 127, and front pixels = 255.
-      - [ ] when user clicks "save and continue" the labels should be overlain on the image and displayed. Use ```labeloverlay``` function. You may have to change the data-type from uint8 to catagorical. 
       - [ ] the images should be in a subdirectory called `trainingImages/`; labels should be in `trainingLabels/`
       - [ ] also keep a running log of the input image path, the frame number, and pixels used to make training labels
-
+      - [ ] use video filename and frame number in the app.log structure to create image/label filename; e.g., see startupFcn for "cwd",
+        ```
+        videoPath   = app.log(app.logNum).videoFile;
+        splitPath   = split(videoPath, [filesep]);
+        imageName = [cwd,filesep,'..', filesep,'trainingData',filesep,'trainingImages',filesep,splitPath{end}(1:end-4), '_Frame_', num2string( app.log(app.logNum).frameIndex), '.png' ];
+        app.log(app.logNum).imageName = imageName;
+        imwrite(app.IMG,imageName);
+        ```
+        and so similarly for a ```labelName``` variable.     
 ## Train the network and sell to google!
 
