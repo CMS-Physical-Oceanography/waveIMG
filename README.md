@@ -5,6 +5,11 @@ workflow for identifying breaking waves in surfzone video/imagery
 - Make sure you are in the mfiles directory when you run it
 - Put the files you need in the data folder if you want it to auto load the files in the app
    - if not then select the folder that the files are in when you hit the select video files button
+- When selecting fronts, zoom in before clicking the select fronts button no ensure the best accuracy when tracing the pixels in the image.
+- Do not spam click save & continue, if you have already done so once. Once it saves and continues, you must either load new frame, or go to another file and start selecting fronts there.
+- If you try to plot frames and get an error, the frames you are trying to plot may be more than there actually are in the video. Try plotting a fewer number of frames.
+
+
 
 
 
@@ -48,9 +53,9 @@ create a new matlab-app for training data:
 	      - 127 for non-breaking wave regions (beach, water, or trailing foam)
 	      - 255 for points/regions selected by user
    6) archive training image/label pairs
-      - [ ] the images should be in a subdirectory called `trainingImages/`; labels should be in `trainingLabels/`
-      - [ ] also keep a running log of the input image path, the frame number, and pixels used to make training labels
-      - [ ] use video filename and frame number in the app.log structure to create image/label filename; e.g., see startupFcn for "cwd",
+      - [x] the images should be in a subdirectory called `trainingImages/`; labels should be in `trainingLabels/`
+      - [x] also keep a running log of the input image path, the frame number, and pixels used to make training labels
+      - [x] use video filename and frame number in the app.log structure to create image/label filename; e.g., see startupFcn for "cwd",
         ```
         videoPath   = app.log(app.logNum).videoFile;
         splitPath   = split(videoPath, [filesep]);
