@@ -9,7 +9,7 @@ info.X_min = 75;
 info.X_max = 250;
 info.Y_min = 590;
 info.Y_max = 1000;
-% estimate grid resolution based on network size
+% estimate grid resolution based on neural network size
 info.Nx    = 256;
 info.Ny    = 512;
 info.X_res = (info.X_max-info.X_min)/(info.Nx-1);
