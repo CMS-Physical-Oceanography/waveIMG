@@ -1,3 +1,0 @@
-% function reads video, grid, and camera parameters;
-% loads the current video, but does not rectify.
-[info, icp, beta0] = define_camera_parameters();
