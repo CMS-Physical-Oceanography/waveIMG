@@ -1,3 +1,5 @@
+clear all
+close all
 % the steps involved are,
 % 1) define camera, grid, network parameters
 % 2) load a video, read frames, rectify and interp to regular FRF grid
@@ -6,11 +8,12 @@
 % 5) extract the coordinates of the ridges/maxima in (4). This is the sketchy/subjective/kludgy. 
 %
 % 1) function reads video, grid, and camera parameters;
+addpath(genpath('../'));
 [info, icp, beta0] = define_camera_parameters();% located in waveIMG/mfiles/video_processing
 %
 % 2) read video frames, etc.
 % where are videos? what are the filenames (this would eventually require a loop)
-videoDir = ['/Users/derekgrimes/git/waveIMG/data/20130929/1100/'];
+videoDir = ['../../data/20130929/1100/'];
 videoFile= ['20130929_112106_B314_00408CEBCECB_11.avi'];
 % load video
 videoPath = [videoDir,filesep,videoFile];
@@ -43,9 +46,30 @@ for ii   = 1:3
     % interpolate to grid points
     IMG(:,:,ii) = interp2(U,V,IMGraw,Uint,Vint, 'linear', nan);
 end
-IMG = uint8(IMG);
 %
 % make a figure
+figure
+RI = imref2d(size(IMG));
+RI.XWorldLimits = [info.X_min info.X_max];
+RI.YWorldLimits = [info.Y_min info.Y_max];
+imshow(uint8(IMG),RI)
+% imagesc(X, Y, IMG)
+%               
+% colormap('bone')
+xlabel(' $x$ [m]', 'interpreter','latex')
+ylabel(' $y$ [m]', 'interpreter','latex') 
+axis(gca,'equal')
+set(gca,'tickdir','out','ticklabelinterpreter','latex','fontsize',15,'ydir','normal')
+title(gca,sprintf("Psuedo-Image: # %d",frameNum));
+%
+% 3) now use Carinni et al to try and separate water/foam peaks (if any)
+[foam_th,foam_pk,ob,opdf] = water_foam_threshold(IMG,1);
+%
+% now re-scale IMG using the water/foam threshold
+IMG0 = IMG;
+IMG  = 1./(1+exp(-3*pi/2*(IMG0-foam_th)/(255-foam_th)));
+IMG = uint8(IMG);
+%
 figure
 RI = imref2d(size(IMG));
 RI.XWorldLimits = [info.X_min info.X_max];

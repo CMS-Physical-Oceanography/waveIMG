@@ -1,0 +1,88 @@
+function [pred,prob,xp,yp,tp] = apply_full_IMG_CNN_v1(fin,I,x,y,stats,dx,dy,dt,plotter);
+%
+% USAGE: [pred,prob,xp,yp,tp] = apply_full_IMG_CNN_v1(fin,I,x,y,stats,dx,dy,dt,plotter);
+% fin = /path/to/pre-processed/input/images
+% 
+if ~exist('plotter','var')
+    plotter=0;
+end
+%
+%  load(fin,'I','x','y','stats')
+%  Name           Size                       Bytes  Class    
+%               (Ny,Nx,Nt)
+%  I          2051x876x750            10780056000  double              
+%  x             1x876                       7008  double              
+%  y          2051x1                        16408  double
+%  stats         1x1                         2640  struct
+%     struct w/ fields:
+%                    I: [4.9834 7.4701 9.9569 12.4436  ... ]
+%                  PDF: [2.6881e-09 5.3763e-09 3.9426e-08 1.4157e-07 ... ]
+%                   Tp: 7.0433
+%                   cp: 6.1159
+%                 foam: 0.5000
+%              foamCOM: 0.8302
+%
+%
+[Ny,Nx,Nt] = size(I);
+t = (1:Nt)*dt;
+dx = x(2)-x(1);
+dy = y(2)-y(1);
+dt = t(2)-t(1);
+%
+%
+[xx,yy]    = meshgrid(x,y);
+%
+CNN    = load('/home/derek/projects/ShortCrests/IMG/mat_data/imgNet_v8.mat');
+imgNet = CNN.imgNet;
+inSize = imgNet.Layers(1).InputSize;
+nNy = inSize(1);
+nNx = inSize(2);
+nNt = inSize(3);
+%
+% resize I
+I0 = imresize(I,[nNy nNx]);
+dxp= dx*Nx/nNx; xp = x(1) + dxp*[0:nNx-1] + (range(x)-dxp*(nNx-1))/2;
+dyp= dy*Ny/nNy; yp = y(1) + dyp*[0:nNy-1] + (range(y)-dyp*(nNy-1))/2;
+dtp= dt/2;
+%
+%
+ii   = 2:2:Nt-1;
+inds = 1:length(ii);
+% parfor (ind = inds, 12)
+for ind = inds
+            tt     = ii(ind);
+            tp(ind)= t(tt);
+            %
+            chnk = I0(:,:,tt + [-(nNt-1)/2:1:(nNt-1)/2]);
+            lbl  = activations(imgNet,chnk,'softmax');
+            %
+            [~,pred(:,:,ind)]=max(lbl,[],3);
+               prob(:,:,ind) =    lbl(:,:,3);
+end
+% toc    
+% end
+if plotter
+    timestr = regexp(fin,'(?<=processed_full_IMG_).*(?=.mat)','match');
+    fout = ['/home/derek/projects/ShortCrests/IMG/figures/','net_',timestr{1},'.png'];
+    fig = figure;
+    ax1 = subplot(1,2,1);
+    imagesc(ax1,x,y,squeeze(I(:,:,2))),colormap(ax1,bone)
+    caxis(ax1,[0 255]),
+    hold on,
+    set(ax1,'ydir','normal')
+    ylabel(ax1,'$y$','interpreter','latex','fontsize',16)
+    xlabel(ax1,'$x$','interpreter','latex','fontsize',16)
+    title(ax1,timestr{1})
+    ax2 = subplot(1,2,2);
+    imagesc(ax2,xp,yp,squeeze(prob(:,:,1))),
+    colormap(ax2,bone),
+    caxis(ax2,[0 1])
+    set(ax2,'ydir','normal')
+    xlabel(ax2,'$x_p$','interpreter','latex','fontsize',16)
+    ylabel(ax2,'$y_p$','interpreter','latex','fontsize',16)
+    exportgraphics(fig,fout)
+    close(fig)
+end
+%
+end
+
