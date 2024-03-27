@@ -23,7 +23,7 @@ dy = y(2)-y(1);
 %
 [xx,yy]    = meshgrid(x,y);
 %
-CNN    = load('/home/derek/projects/ShortCrests/IMG/mat_data/imgNet_v8.mat');
+CNN    = load('../../mat_data/imgNet_v8.mat');
 imgNet = CNN.imgNet;
 inSize = imgNet.Layers(1).InputSize;
 nNy = inSize(1);
