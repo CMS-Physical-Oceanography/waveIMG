@@ -3,14 +3,14 @@ Code and example data for identifying breaking waves in surfzone video/imagery.
 
 There are two stages:
 - Create Training Data & Train Network:
-  -- in the `/mfiles/` directory is a matlab application `select_CNN_training_data.mlapp`
-  -- use this function to load images and annotate breaking wave features
-  -- these are saved as image/label pairs for training a convolutional neural network (CNN), called `imgNet`.
-  -- the `video_processing` directory has CIRN processing scripts and code written by Ciara Dooley and Levi Gorrell
-  -- lastly, create and train the network using `make_IMG_CNN_fullImage.m`
+  - in the `/mfiles/` directory is a matlab application `select_CNN_training_data.mlapp`
+  - use this function to load images and annotate breaking wave features
+  - these are saved as image/label pairs for training a convolutional neural network (CNN), called `imgNet`.
+  - the `video_processing` directory has CIRN processing scripts and code written by Ciara Dooley and Levi Gorrell
+  - lastly, create and train the network using `make_IMG_CNN_fullImage.m`
 - Implement *imgNet* to identify breaking waves:
-  -- in the `/mfiles/wave_front_detection/` directory is the script `main_workflow.m` that has all the necessary steps
-  -- the steps are:
+  - in the `/mfiles/wave_front_detection/` directory is the script `main_workflow.m` that has all the necessary steps
+  - the steps are:
      1) define camera, grid, network parameters
      2) load a video, read frames, rectify and interp to regular FRF grid
      3) (optional: 1=yes/0=no) re-scale the image intensity (gray-scale) to enhance contrast between foam/water
