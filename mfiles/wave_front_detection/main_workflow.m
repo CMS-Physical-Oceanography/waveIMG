@@ -98,7 +98,8 @@ end
 %
 % 4) apply neural network
 dt = 1/info.freq;
-[pred,prob,xp,yp,tp] = wave_front_from_IMG_CNN(IMG,X,Y,dt,1);
+% [pred,prob,xp,yp,tp] = wave_front_from_IMG_CNN(IMG,X,Y,dt,1);
+[pred,prob,xp,yp,tp] = wave_front_from_IMG_UNET(IMG,X,Y,dt,1);
 %
 % 5) try to extract coordinates of the high probability ridges in "prob"
 % to be extra confusing I wrote the search function with (row,column)==(x,y)
