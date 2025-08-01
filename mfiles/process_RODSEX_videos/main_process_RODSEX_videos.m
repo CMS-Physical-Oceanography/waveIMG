@@ -209,7 +209,7 @@ for ii = 1:Nf
             for mm = 1:length(front_number)
                 idx = find(fnlog==front_number(mm));
                 Ltmp = cat(1,Ltmp,range(Y_front(idx)));
-                Xtmp = cat(1,Ltmp,mean(X_front(idx)));
+                Xtmp = cat(1,Xtmp,mean (X_front(idx)));
             end
         end
         % 16) combine w/ 5-min stats for this hour... this is done above!

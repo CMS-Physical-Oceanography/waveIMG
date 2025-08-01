@@ -32,149 +32,318 @@ rename the function to avoid a potential name conflict.]
 In addpath>doPathAddition (line 126)
 In addpath (line 90)
 In startup (line 12)] 
->> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_13
-				20130922_130039_6564_00408CEBCECB.mp4
+>> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130922_13
+		20130922_130039_6564_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_13
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130922_14
+		20130922_140039_2E22_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_14
-				20130922_140039_2E22_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130922_15
+		20130922_150039_CEE8_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_14
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130922_16
+		20130922_160040_A5C4_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_15
-				20130922_150039_CEE8_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130922_17
+		20130922_170040_FFBA_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_15
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130922_18
+		20130922_180040_AB97_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_16
-				20130922_160040_A5C4_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_05
+		20130923_050000_9C51_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_16
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_06
+		20130923_060001_09E3_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_17
-				20130922_170040_FFBA_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_07
+		20130923_070002_4FCF_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_17
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_08
+		20130923_080003_D418_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_18
-				20130922_180040_AB97_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_09
+		20130923_090004_10C1_00408CEBCECB.mp4
+video dimensions: 960.000000 x 1280.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130922_18
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_10
+		20130923_100303_EBD8_00408CEBCECB.mp4
+video dimensions: 1944.000000 x 2592.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_05
-				20130923_050000_9C51_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_11
+		20130923_110305_7838_00408CEBCECB.mp4
+video dimensions: 1944.000000 x 2592.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_05
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_12
+		20130923_120306_E7CE_00408CEBCECB.mp4
+video dimensions: 1944.000000 x 2592.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_06
-				20130923_060001_09E3_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_13
+		20130923_130308_7104_00408CEBCECB.mp4
+video dimensions: 1944.000000 x 2592.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_06
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_14
+		20130923_140309_8672_00408CEBCECB.mp4
+video dimensions: 1944.000000 x 2592.000000 , differ from known camera parameters
 
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_07
-				20130923_070002_4FCF_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_15
+		20130923_150311_B4DE_00408CEBCECB.mp4
+video dimensions: 1944.000000 x 2592.000000 , differ from known camera parameters
 
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_07
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_08
-				20130923_080003_D418_00408CEBCECB.mp4
-
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_08
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_09
-				20130923_090004_10C1_00408CEBCECB.mp4
-
-video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_09
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_10
-				20130923_100303_EBD8_00408CEBCECB.mp4
-
-video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_10
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_11
-				20130923_110305_7838_00408CEBCECB.mp4
-
-video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_11
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_12
-				20130923_120306_E7CE_00408CEBCECB.mp4
-
-video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_12
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_13
-				20130923_130308_7104_00408CEBCECB.mp4
-
-video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_13
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_14
-				20130923_140309_8672_00408CEBCECB.mp4
-
-video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_14
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_15
-				20130923_150311_B4DE_00408CEBCECB.mp4
-
-video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_15
-
-working on: 
-	/data0/ShortCrests/IMG/data/RODSEX/20130923_16
-				20130923_160014_E4C7_00408CEBCECB.mp4
+working on: 	/data0/ShortCrests/IMG/data/RODSEX/20130923_16
+		20130923_160014_E4C7_00408CEBCECB.mp4
 trying zero-up crossing for threshold...
 multiple minima... using distance to 50%-cdf and lowest pdf: 135.1774
 
  choosing foam center of mass fcm = 154.432793 instead of peak fpk=137.301953
-{Error using .*
-Integers can only be combined with integers of the same class, or scalar
-doubles.
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.2489
 
-Error in linspace (line 46)
-        y = d1 + (0:n1).*(d2 - d1)./n1;
-                       ^
-Error in hist (line 123)
-        edges = linspace(miny,maxy,x+1);
-                ^^^^^^^^^^^^^^^^^^^^^^^
-Error in water_foam_threshold (line 8)
-[oH,ob] = hist(IMG(IMG~=0),Nb);
-          ^^^^^^^^^^^^^^^^^^^^
+ choosing foam center of mass fcm = 154.458070 instead of peak fpk=137.408596
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.2489
+
+ choosing foam center of mass fcm = 154.533247 instead of peak fpk=137.408596
+trying zero-up crossing for threshold...
+foam threshold masks either <30% or >90% of image, line 65
+using 2nd-Quartile of d^2/dI^2 (pdf), similar to Carini et al., 2015
+
+ choosing foam center of mass fcm = 149.652229 instead of peak fpk=128.770001
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 110.8444
+
+ choosing foam center of mass fcm = 138.391024 instead of peak fpk=112.988480
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 152.1409
+
+ choosing foam center of mass fcm = 164.143547 instead of peak fpk=154.205112
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 151.1046
+
+ choosing foam center of mass fcm = 163.539556 instead of peak fpk=153.214144
+trying zero-up crossing for threshold...
+
+ choosing foam center of mass fcm = 161.182136 instead of peak fpk=151.104582
+trying zero-up crossing for threshold...
+
+ choosing foam center of mass fcm = 161.246450 instead of peak fpk=151.104582
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 110.9431
+
+ choosing foam center of mass fcm = 138.349963 instead of peak fpk=113.051139
+[Warning: Matrix is singular to working precision.] 
+[> In bore_front_search (line 257)
+] 
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 148.8571
+
+ choosing foam center of mass fcm = 162.293906 instead of peak fpk=150.995055
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 142.4433
+
+ choosing foam center of mass fcm = 158.751321 instead of peak fpk=144.581261
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 110.3744
+
+ choosing foam center of mass fcm = 137.913453 instead of peak fpk=112.512292
+[Warning: Rank deficient, rank = 1, tol =  9.094947e-13.] 
+[> In bore_front_search (line 161)
+] 
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 144.6498
+
+ choosing foam center of mass fcm = 159.847552 instead of peak fpk=148.804563
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.5447
+
+ choosing foam center of mass fcm = 137.114321 instead of peak fpk=111.666538
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 142.7785
+
+ choosing foam center of mass fcm = 158.800904 instead of peak fpk=147.129865
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 142.433
+
+ choosing foam center of mass fcm = 158.641940 instead of peak fpk=149.137962
+trying zero-up crossing for threshold...
+
+ choosing foam center of mass fcm = 158.611324 instead of peak fpk=149.137962
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 108.8623
+
+ choosing foam center of mass fcm = 136.415072 instead of peak fpk=111.098224
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 138.6103
+
+ choosing foam center of mass fcm = 156.418507 instead of peak fpk=142.895198
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 136.4678
+
+ choosing foam center of mass fcm = 155.132580 instead of peak fpk=140.752746
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.4118
+
+ choosing foam center of mass fcm = 154.458064 instead of peak fpk=150.776484
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 108.8982
+
+ choosing foam center of mass fcm = 136.251613 instead of peak fpk=111.096616
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 108.8982
+
+ choosing foam center of mass fcm = 136.203243 instead of peak fpk=111.096616
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.0346
+
+ choosing foam center of mass fcm = 154.098299 instead of peak fpk=137.159901
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.5308
+
+ choosing foam center of mass fcm = 136.802671 instead of peak fpk=111.656162
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.5308
+
+ choosing foam center of mass fcm = 136.782942 instead of peak fpk=111.656162
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.4846
+
+ choosing foam center of mass fcm = 136.702918 instead of peak fpk=111.608963
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 110.8554
+
+ choosing foam center of mass fcm = 138.068001 instead of peak fpk=112.958939
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.2161
+
+ choosing foam center of mass fcm = 136.467277 instead of peak fpk=111.288353
+[Warning: Rank deficient, rank = 1, tol =  1.670848e-12.] 
+[> In bore_front_search (line 161)
+] 
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 110.7852
+
+ choosing foam center of mass fcm = 138.018779 instead of peak fpk=112.854459
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.8773
+
+ choosing foam center of mass fcm = 137.066148 instead of peak fpk=111.968690
+[Warning: Matrix is singular to working precision.] 
+[> In bore_front_search (line 257)
+] 
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.402
+
+ choosing foam center of mass fcm = 136.742147 instead of peak fpk=111.656164
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 136.4515
+
+ choosing foam center of mass fcm = 154.867658 instead of peak fpk=140.959704
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.402
+
+ choosing foam center of mass fcm = 136.699071 instead of peak fpk=111.656164
+[Warning: Matrix is singular to working precision.] 
+[> In bore_front_search (line 257)
+] 
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 109.5735
+
+ choosing foam center of mass fcm = 136.813829 instead of peak fpk=111.785532
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.005
+
+ choosing foam center of mass fcm = 154.073772 instead of peak fpk=139.441845
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.005
+
+ choosing foam center of mass fcm = 154.090434 instead of peak fpk=139.441845
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 134.8003
+
+ choosing foam center of mass fcm = 154.015362 instead of peak fpk=137.023908
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.6748
+
+ choosing foam center of mass fcm = 154.442214 instead of peak fpk=137.774044
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.6897
+
+ choosing foam center of mass fcm = 154.445307 instead of peak fpk=139.888752
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.6897
+
+ choosing foam center of mass fcm = 154.416725 instead of peak fpk=139.888752
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 146.1873
+
+ choosing foam center of mass fcm = 160.109622 instead of peak fpk=148.286819
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 134.7946
+
+ choosing foam center of mass fcm = 153.850803 instead of peak fpk=136.913124
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 145.3871
+
+ choosing foam center of mass fcm = 159.528486 instead of peak fpk=147.505545
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 153.861
+
+ choosing foam center of mass fcm = 164.324645 instead of peak fpk=1.330141
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 133.4302
+
+ choosing foam center of mass fcm = 153.085747 instead of peak fpk=135.527226
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 141.8182
+
+ choosing foam center of mass fcm = 157.495022 instead of peak fpk=150.206208
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 139.86
+
+ choosing foam center of mass fcm = 156.448554 instead of peak fpk=144.122268
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 129.2043
+
+ choosing foam center of mass fcm = 150.823621 instead of peak fpk=131.335480
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 129.2043
+
+ choosing foam center of mass fcm = 150.763032 instead of peak fpk=131.335480
+trying zero-up crossing for threshold...
+
+ choosing foam center of mass fcm = 155.398676 instead of peak fpk=146.835885
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 131.4692
+
+ choosing foam center of mass fcm = 151.880795 instead of peak fpk=146.886554
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 131.4472
+
+ choosing foam center of mass fcm = 151.852977 instead of peak fpk=140.562020
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 131.2758
+
+ choosing foam center of mass fcm = 151.700274 instead of peak fpk=142.689452
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 131.2758
+
+ choosing foam center of mass fcm = 151.613949 instead of peak fpk=142.689452
+trying zero-up crossing for threshold...
+
+ choosing foam center of mass fcm = 152.814928 instead of peak fpk=142.536742
+		20130923_160212_5381_00408CEBCECB.mp4
+video dimensions: 1944.000000 x 2592.000000 , differ from known camera parameters
+{Index exceeds the number of array elements. Index must not exceed 443.
 } 
->>  /data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat')
- |
-{Invalid use of operator.
-} 
->> 
+>> >> 
