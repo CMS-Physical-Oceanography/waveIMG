@@ -62,11 +62,13 @@ for ii = 1:Nf
     Xtmp = [];
     %
     % 7) begin looping over individual video files:
+    fprintf('\nworking on: \t%s\n',videoFILEs(1).folder);
     for jj=1:Nv
         % 8) define the video path and info and frames,
         videoDIR  = videoFILEs(jj).folder;
         videoFILE = videoFILEs(jj).name;
         videoPATH = [videoDIR,filesep,videoFILE];
+        fprintf('\t\t%s\n',videoFILE)        
         % load the current video, but does not rectify, yet.
         vid   = VideoReader(videoPATH);
         vidHz = vid.FrameRate;
@@ -77,7 +79,7 @@ for ii = 1:Nf
         numberVideoFrames = length(videoFrameIndices);
         %
         if vid.Height~=size(U,1) | vid.Width~=size(U,2)
-            fprintf('\nvideo dimensions: %f x %f , that differ from known camera parameters: \n\t%s\n',vid.Height,vid.Width,videoDIR)
+            fprintf('video dimensions: %f x %f , differ from known camera parameters\n',vid.Height,vid.Width)
             break
         end
         %
@@ -93,6 +95,7 @@ for ii = 1:Nf
             frameNum = kk;
             frames   = frameNum + [0 1 2];
             % 10) construct time-stack image
+            clear IMG
             for ll   = 1:3
                 % load frame    
                 IMGraw  = double(rgb2gray(read(vid,frames(ll))));
@@ -108,20 +111,20 @@ for ii = 1:Nf
             end
             if enhance_image
                 [foam_th,foam_pk,ob,opdf] = water_foam_threshold(IMG,plotter);
-                %
-                f2 = gcf;
                 % now re-scale IMG using the water/foam threshold
                 IMG0 = IMG;
                 IMG  = 255./(1+exp(-3*pi/2*(IMG0-foam_th)/(255-foam_th)));
                 H    = hist(IMG(:),ob);
                 if plotter
+                    %
+                    f2 = gcf;
                     hold on,plot(ob,H/numel(IMG),'-k')
-                    figname = fprintf([figDIR,filesep,'intensity_pdf_%s%s.pdf'],yymmdd{ii},HH{ii});
+                    figname = fprintf([figDIR,filesep,'intensity_pdf_%s%s.pdf'],yyyymmdd{ii},HH{ii});
                     exportgraphics(f2,figname)
                     close(f2)
                 end
                 %
-                IMG = uint8(IMG);
+% $$$                 IMG = uint8(IMG);
                 %
                 % make a figure
                 if plotter
@@ -145,7 +148,7 @@ for ii = 1:Nf
                     RI = imref2d(size(IMG));
                     RI.XWorldLimits = [info.X_min info.X_max];
                     RI.YWorldLimits = [info.Y_min info.Y_max];
-                    imshow(IMG,RI)
+                    imshow(uint8(IMG),RI)
                     % imagesc(X, Y, IMG)
                     %               
                     % colormap('bone')
@@ -155,7 +158,7 @@ for ii = 1:Nf
                     set(f1a2,'tickdir','out','ticklabelinterpreter','latex','fontsize',15,'ydir','normal')
                     title(f1a2,"Enhanced Contrast");
                     linkaxes([f1a1 f1a2])
-                    figname = fprintf([figDIR,filesep,'enhanced_img_%s%s.pdf'],yymmdd{ii},HH{ii});
+                    figname = sprintf([figDIR,filesep,'enhanced_img_%s%s.pdf'],yyyymmdd{ii},HH{ii});
                     exportgraphics(f1,figname)
                     close(f1)
                 end
@@ -174,7 +177,7 @@ for ii = 1:Nf
             r0=20;
             Pmax=1;
             Pmin=0.5*Pmax;
-            Pnon=0.15*Pmax;
+            Pnon=0.1*Pmax;
             % you would need to iterate here through prob(Ny,Nx,Nt)
             [crlog,bblog,fnlog] = bore_front_search(prob',info.Ny,info.Nx,r0,Pnon,Pmin,Pmax,0);
             %
@@ -195,7 +198,7 @@ for ii = 1:Nf
             if plotter
                 f3 = gcf;
                 hold on, plot(X_front,Y_front,'r.','markersize',4)
-                figname = fprintf([figDIR,filesep,'labeled_img_%s%s.pdf'],yymmdd{ii},HH{ii});
+                figname = sfprintf([figDIR,filesep,'labeled_img_%s%s.pdf'],yyyymmdd{ii},HH{ii});
                 exportgraphics(f3,figname)
                 close(f3)
             end
@@ -213,8 +216,9 @@ for ii = 1:Nf
     end
     % 17) archive hourly stats
     % loop over cross-shore bin
+    if ~isempty(Ltmp)
     for mm = 1:Nx
-        logicX = (Xtmp>=xbins(mm)-db/2 & Xtmp<xbins(mm)+db/2)
+        logicX = (Xtmp>=xbins(mm)-db/2 & Xtmp<xbins(mm)+db/2);
         idx    = find(logicX);
         % loop over length bins
         for nn=1:Nl
@@ -226,5 +230,6 @@ for ii = 1:Nf
         mL(mm,ii)= mean(log10(Ltmp(idx)),'omitnan');%    mL(x,t)-- log10-mean
         sL(mm,ii)= std(log10(Ltmp(idx)),[],'omitnan');%    sL(x,t)-- log10-std
     end
+    end
 end
-save('/data1/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat')
+save('/data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat')

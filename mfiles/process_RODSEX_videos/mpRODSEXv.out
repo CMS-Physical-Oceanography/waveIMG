@@ -32,18 +32,149 @@ rename the function to avoid a potential name conflict.]
 In addpath>doPathAddition (line 126)
 In addpath (line 90)
 In startup (line 12)] 
->> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_13
+				20130922_130039_6564_00408CEBCECB.mp4
+
 video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
 	/data0/ShortCrests/IMG/data/RODSEX/20130922_13
 
-logicX =
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_14
+				20130922_140039_2E22_00408CEBCECB.mp4
 
-  0x0 empty logical array
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_14
 
-{Unrecognized function or variable 'logicY'.
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_15
+				20130922_150039_CEE8_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_15
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_16
+				20130922_160040_A5C4_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_16
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_17
+				20130922_170040_FFBA_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_17
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_18
+				20130922_180040_AB97_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130922_18
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_05
+				20130923_050000_9C51_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_05
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_06
+				20130923_060001_09E3_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_06
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_07
+				20130923_070002_4FCF_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_07
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_08
+				20130923_080003_D418_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_08
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_09
+				20130923_090004_10C1_00408CEBCECB.mp4
+
+video dimensions: 960.000000 x 1280.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_09
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_10
+				20130923_100303_EBD8_00408CEBCECB.mp4
+
+video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_10
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_11
+				20130923_110305_7838_00408CEBCECB.mp4
+
+video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_11
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_12
+				20130923_120306_E7CE_00408CEBCECB.mp4
+
+video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_12
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_13
+				20130923_130308_7104_00408CEBCECB.mp4
+
+video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_13
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_14
+				20130923_140309_8672_00408CEBCECB.mp4
+
+video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_14
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_15
+				20130923_150311_B4DE_00408CEBCECB.mp4
+
+video dimensions: 1944.000000 x 2592.000000 , that differ from known camera parameters: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_15
+
+working on: 
+	/data0/ShortCrests/IMG/data/RODSEX/20130923_16
+				20130923_160014_E4C7_00408CEBCECB.mp4
+trying zero-up crossing for threshold...
+multiple minima... using distance to 50%-cdf and lowest pdf: 135.1774
+
+ choosing foam center of mass fcm = 154.432793 instead of peak fpk=137.301953
+{Error using .*
+Integers can only be combined with integers of the same class, or scalar
+doubles.
+
+Error in linspace (line 46)
+        y = d1 + (0:n1).*(d2 - d1)./n1;
+                       ^
+Error in hist (line 123)
+        edges = linspace(miny,maxy,x+1);
+                ^^^^^^^^^^^^^^^^^^^^^^^
+Error in water_foam_threshold (line 8)
+[oH,ob] = hist(IMG(IMG~=0),Nb);
+          ^^^^^^^^^^^^^^^^^^^^
 } 
->> {Error using save
-Cannot create 'RODSEX_IMG_FRONT_STATS.mat' because '/data1/ShortCrests/IMG'
-does not exist.
+>>  /data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat')
+ |
+{Invalid use of operator.
 } 
 >> 
