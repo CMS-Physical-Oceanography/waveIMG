@@ -5,19 +5,21 @@ function [foam_th,foam_pk,ob,opdf] = water_foam_threshold(IMG,plotter)
 % estimate foam threshold to rescale intensities and enhance contrast.
 % follows method used by Carini et al 2015
 Nb = 100;
-[oH,ob] = hist(IMG(IMG~=0),Nb);
+ob = [0:Nb]*255/Nb;
+[oH,~] = histcounts(IMG(IMG~=0),ob);
+ob = ob(1:end-1)+255/(2*Nb);
 %
 % estimate pdf and cdf
 opdf = oH./sum(oH);
 ocdf = cumsum(opdf);
-% only look at intensity characteristic of between %1 and %90 of pixels
-valid_cdf = (ocdf>0.01 & ocdf<0.90);
+% only look at intensity characteristic of between %2 and %98 of pixels
+valid_cdf = (ocdf>0.01 & ocdf<0.99);
 %
 % mask the pdf, and find the maximum probability
 % this assumes that water is the dominant signal (i.e., foam has smaller maximum)
 [opk,ipk] = max(opdf.*valid_cdf);
 if ob(ipk)>128,
-    disp('peak pdf(I) > 50% of range, using I<128: line 17'),
+    % disp('peak pdf(I) > 50% of range, using I<128: line 17'),
     [opk,ipk] = max(opdf.*valid_cdf.*(ob<=128));
 end
 % we're now only considering points above maximum (i.e., look for a foam peak)
@@ -30,18 +32,18 @@ d2opdf= gradient(dopdf);
 % look for zero-up crossing above "water" peak to separate "foam" peak
 zu = find(sign(dopdf(ipk:end-1))==-1 & sign(dopdf(ipk+1:end))==1); 
 if ~isempty(zu)
-    disp('trying zero-up crossing for threshold...')
+    % disp('trying zero-up crossing for threshold...')
     ot = ipk+zu;
     if length(ot)>1
         % try to find something that splits the data in half (1/4 weight) and has small pdf minimum (3/4 weight)
         [do, iot] = min( abs( ocdf(ot)-0.5 )/4 + opdf(ot)*3/4 );
         ot = ot(iot);
-        disp(['multiple minima... using distance to 50%-cdf and lowest pdf: ', num2str(ob(ot))])
+        % disp(['multiple minima... using distance to 50%-cdf and lowest pdf: ', num2str(ob(ot))])
     end
 else
     %
     % try the Carini et al 2015 method
-    disp('using 2nd-Quartile of d^2/dI^2 (pdf), similar to Carini et al., 2015') 
+    % disp('using 2nd-Quartile of d^2/dI^2 (pdf), similar to Carini et al., 2015') 
     [d2max,i2max] = max(d2opdf.*(valid_cdf.*valid_pdf) );
     iGTmax = (1:Nb>i2max);
     Q2 = median(d2opdf(iGTmax & valid_cdf & valid_pdf));
@@ -51,8 +53,8 @@ end
 %
 % if the zero-up crossing masks a significant number of image, default to carini method
 if ocdf(ot)<0.30 | ocdf(ot)>0.90
-    disp('foam threshold masks either <30% or >90% of image, line 65'),
-    disp('using 2nd-Quartile of d^2/dI^2 (pdf), similar to Carini et al., 2015') 
+    % disp('foam threshold masks either <30% or >90% of image, line 65'),
+    % disp('using 2nd-Quartile of d^2/dI^2 (pdf), similar to Carini et al., 2015') 
     [d2max,i2max] = max(d2opdf.*(valid_cdf.*valid_pdf) );
     iGTmax = (1:Nb>i2max);
     Q2 = median(d2opdf(iGTmax & valid_cdf & valid_pdf));
@@ -62,7 +64,7 @@ end
 % sometimes the pdf is unimodal, and ot=empty
 if isempty(ot)
     [d2max,i2max] = max(d2opdf.*(valid_cdf.*valid_pdf) );
-    disp('using location of maximum curvature.')
+    % disp('using location of maximum curvature.')
     ot = i2max;
 end
 %
@@ -77,7 +79,7 @@ foam_pk= ob(ipk2);
 foam_cm = sum(ob.*opdf.*(1:Nb>ot))./sum(opdf.*(1:Nb>ot));
 %
 if foam_cm>foam_pk
-    fprintf('\n choosing foam center of mass fcm = %f instead of peak fpk=%f\n',foam_cm,foam_pk)
+    % fprintf('\n choosing foam center of mass fcm = %f instead of peak fpk=%f\n',foam_cm,foam_pk)
     foam_pk = foam_cm;
 end
 %

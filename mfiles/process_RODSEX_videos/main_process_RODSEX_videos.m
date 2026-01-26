@@ -6,6 +6,10 @@ close all
 enhance_image = 1;
 % 1.2) add to path functions to read video, grid, and camera parameters:
 addpath(genpath('../'));
+% check paths:
+which water_foam_threshold
+which wave_front_from_IMG_UNET
+which bore_front_search
 %      located in waveIMG/mfiles/video_processing:
 [info, icp, beta0] = define_camera_parameters();
 % prepare image (U,V) coordinates for rectification
@@ -14,6 +18,9 @@ addpath(genpath('../'));
 X = info.X_min:info.X_res:info.X_max;
 Y = info.Y_min:info.Y_res:info.Y_max;
 [xx,yy] = meshgrid(X,Y);
+%
+% filter for NDWI mask
+flt = hamming(21); flt = flt*flt'./sum(flt)^2;
 %
 % 2) get list of all video directories:
 %    Top-level RODSEX directory:
@@ -51,7 +58,11 @@ sL    = nan(Nx,Nf);%    sL(x,t)-- log10-std
 %    mLsz(t)    -- surfzone averaged log10-mean
 %    sLsz(t)    -- surfzone averaged log10-std
 %
+IntensityLog = [];
+VarianceLog  = [];
+%
 % 4) begin looping over the directories, within each are multiple 5-minute videos
+save('/data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat')
 for ii = 1:Nf
     % 5) get a list of all 5-minute videos for this hour
     videoFILEs = dir([rootDIR,filesep,hourDIRs(ii).name,filesep,'*.mp4']);
@@ -65,6 +76,7 @@ for ii = 1:Nf
     fprintf('\nworking on: \t%s\n',videoFILEs(1).folder);
     for jj=1:Nv
         % 8) define the video path and info and frames,
+        timerVal = tic;
         videoDIR  = videoFILEs(jj).folder;
         videoFILE = videoFILEs(jj).name;
         videoPATH = [videoDIR,filesep,videoFILE];
@@ -80,11 +92,14 @@ for ii = 1:Nf
         %
         if vid.Height~=size(U,1) | vid.Width~=size(U,2)
             fprintf('video dimensions: %f x %f , differ from known camera parameters\n',vid.Height,vid.Width)
+            clear timerVal
             break
         end
         %
         % 9) begin a loop over the number of frames (less 2)
-        for kk=1:numberVideoFrames-2
+        span = 75;
+        fprintf('processing %d frames...\n',floor((numberVideoFrames-2)/span))
+        for kk=1:span:numberVideoFrames-2
             %
             % this is where you'd apply tidal correction
             z_tide    = zeros(size(xx));
@@ -92,36 +107,64 @@ for ii = 1:Nf
             % if you're not correcting for tides/waterlevel variation, this can be done once
             [Uint,Vint]  = getUVfromXYZ(xx,yy, z_tide, icp, beta0);
             % we use a 3-image time-stack... I trained it on 0.5 Hz.
-            frameNum = kk;
+            frameNum = videoFrameIndices(kk);
             frames   = frameNum + [0 1 2];
             % 10) construct time-stack image
-            clear IMG
+% $$$             clear IMG NDWI
+% $$$             NDWI=0;
             for ll   = 1:3
-                % load frame    
-                IMGraw  = double(rgb2gray(read(vid,frames(ll))));
+                % load frame
+                im      = double(read(vid,frames(ll)));
+% $$$                 NDWI    = NDWI+(im(:,:,1)-im(:,:,2))./(im(:,:,1)+im(:,:,2));
+                IMGraw  = double(rgb2gray(uint8(im)));
                 % interpolate to grid points
                 IMG(:,:,ll) = interp2(U,V,IMGraw,Uint,Vint, 'linear', nan);
             end
-            %
-            % 11) (optional) now use Carinni et al to try and separate water/foam peaks (if any)
-            if str2num(HH{ii})==12 & kk==1
+% $$$             %
+% $$$             MASK = interp2(U,V,NDWI,Uint,Vint, 'linear', nan);
+% $$$             MASK(isnan(MASK))=1;
+% $$$             MASK = conv2(MASK,flt,'same');
+% $$$             IMG(repmat(MASK>0.35-std(NDWI(:),'omitnan'),1,1,3))=nan;
+% $$$             %
+            if kk==1 & jj==1% str2num(HH{ii})==12
                 plotter=1;
             else
                 plotter=0;
             end
+            %
+            % 10.1) need to filter imagesc based on:
+            % overall intensity (too bright/dark)
+            Nb     = 100;
+            ob     = [0:Nb]*255/Nb;
+            [oH,~] = histcounts(IMG(IMG~=0),ob);
+            ob     = ob(1:end-1)+255/(2*Nb);
+            Int    = sum(oH.*ob,'omitnan')./sum(oH,'omitnan');
+            % too much variance (speckling)
+            Var    = var(IMG(IMG~=0),[],'omitnan');
+            %
+            if Int<50 | Var<150
+                fprintf('Skipping frame: \n\tIntensity: %f\n\tVariance: %f\n',Int,Var)
+                continue
+            end
+            IntensityLog = cat(1,IntensityLog,Int);
+            VarianceLog  = cat(1,VarianceLog,Var);
+            %
+            %
+            % 11) (optional) now use Carinni et al to try and separate water/foam peaks (if any)
             if enhance_image
                 [foam_th,foam_pk,ob,opdf] = water_foam_threshold(IMG,plotter);
                 % now re-scale IMG using the water/foam threshold
                 IMG0 = IMG;
-                IMG  = 255./(1+exp(-3*pi/2*(IMG0-foam_th)/(255-foam_th)));
-                H    = hist(IMG(:),ob);
+                IMG  = 255./(1+exp(-3*pi/2*(IMG0-foam_th)/foam_th));% 255-foam_th
+                H    = histcounts(IMG(:),[ob-ob(1) ob(end)+ob(1)]);
                 if plotter
-                    %
                     f2 = gcf;
+                    ylm= get(gca,'ylim');
                     hold on,plot(ob,H/numel(IMG),'-k')
-                    figname = fprintf([figDIR,filesep,'intensity_pdf_%s%s.pdf'],yyyymmdd{ii},HH{ii});
+                    set(gca,'ylim',ylm,'xlim',[0 255])
+                    figname = sprintf([figDIR,filesep,'intensity_pdf_%s%s.pdf'],yyyymmdd{ii},HH{ii});
                     exportgraphics(f2,figname)
-                    close(f2)
+                    close all
                 end
                 %
 % $$$                 IMG = uint8(IMG);
@@ -160,7 +203,7 @@ for ii = 1:Nf
                     linkaxes([f1a1 f1a2])
                     figname = sprintf([figDIR,filesep,'enhanced_img_%s%s.pdf'],yyyymmdd{ii},HH{ii});
                     exportgraphics(f1,figname)
-                    close(f1)
+                    close all
                 end
                 %
             end
@@ -168,8 +211,13 @@ for ii = 1:Nf
             %
             % 12) apply neural network
             dt = 1/info.freq;
+            % need to mask the boundaries between nans and image...75% of radius must be valid
+            r0   = 20;
+            flt  = ones(r0)/r0^2;
+            mask = conv2(~isnan(sum(IMG,3)),flt,'same');
+            mask = mask>0.75;
             % [pred,prob,xp,yp,tp] = wave_front_from_IMG_CNN(IMG,X,Y,dt,1);
-            [pred,prob,xp,yp,tp] = wave_front_from_IMG_UNET(IMG,X,Y,dt,plotter);
+            [pred,prob,xp,yp,tp] = wave_front_from_IMG_UNET(IMG.*mask,X,Y,dt,plotter);
             %
             % 13) try to extract coordinates of the high probability ridges in "prob"
             % to be extra confusing I wrote the search function with (row,column)==(x,y)
@@ -184,7 +232,7 @@ for ii = 1:Nf
             % 14) now switch everything back from (r,c)=(x,y) to (r,c)=(y,x)
             if isempty(crlog),
                 disp(['Uh oh, no fronts identified!'])
-                return
+                continue
             end
             C_front = crlog(:,1);% column==y
             R_front = crlog(:,2);% row   ==x
@@ -198,9 +246,9 @@ for ii = 1:Nf
             if plotter
                 f3 = gcf;
                 hold on, plot(X_front,Y_front,'r.','markersize',4)
-                figname = sfprintf([figDIR,filesep,'labeled_img_%s%s.pdf'],yyyymmdd{ii},HH{ii});
+                figname = sprintf([figDIR,filesep,'labeled_img_%s%s.pdf'],yyyymmdd{ii},HH{ii});
                 exportgraphics(f3,figname)
-                close(f3)
+                close all
             end
             %
             %
@@ -213,6 +261,7 @@ for ii = 1:Nf
             end
         end
         % 16) combine w/ 5-min stats for this hour... this is done above!
+        toc(timerVal)
     end
     % 17) archive hourly stats
     % loop over cross-shore bin
@@ -222,14 +271,29 @@ for ii = 1:Nf
         idx    = find(logicX);
         % loop over length bins
         for nn=1:Nl
-            logicL = (Xtmp>=xbins(mm)-db/2 & Xtmp<xbins(mm)+db/2);
+            lbin_lft = 2.^(log2(lbins(nn))-dl/2)'; if nn==1;  lbin_lft=0;   end
+            lbin_rgt = 2.^(log2(lbins(nn))+dl/2)'; if nn==Nl; lbin_rgt=inf; end
+            logicL = (Ltmp>=lbin_lft & Ltmp<lbin_rgt);
             P(mm,nn,ii) = sum(logicX & logicL);% P(x,l,t)--binned pdf of crest length statistics
         end
         L(mm,ii) = mean(Ltmp(idx));%    L(x,t) -- avg crest length btw 2 & 5 m cross-shore bins
         N(mm,ii) = sum(logicX);%    N(x,t) -- number of crests
         mL(mm,ii)= mean(log10(Ltmp(idx)),'omitnan');%    mL(x,t)-- log10-mean
-        sL(mm,ii)= std(log10(Ltmp(idx)),[],'omitnan');%    sL(x,t)-- log10-std
+        sL(mm,ii)= std( log10(Ltmp(idx)),[],'omitnan');%    sL(x,t)-- log10-std
     end
+    end
+    close all
+    clear Xtmp Ltmp logicX logicL idx front_number uni IMG
+    % periodically save results
+    if ~mod(ii,10)
+        save('/data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat','-append')
     end
 end
-save('/data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat')
+%
+Psz = squeeze(mean(P,1,'omitnan'));% -- surfzone averaged P
+Lsz = mean(L,1,'omitnan');%          -- surfzone averaged L
+Nsz = mean(N,1,'omitnan');%          -- surfzone integrated N
+mLsz= mean(mL,1,'omitnan');%         -- surfzone averaged log10-mean
+sLsz= mean(sL,1,'omitnan');%         -- surfzone averaged log10-std
+%
+save('/data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat','-append')

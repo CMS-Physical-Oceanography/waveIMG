@@ -3,6 +3,7 @@ function [time,zw] = load_FRF_waterlevels(startDate,endDate);
 % USAGE:
 %
 % loads 6-min water level time-series from FRF pier between the startDate/endDate.
+% note... times are relative to gmt
 % For example:
 % 
 %     startDate = '20130920';

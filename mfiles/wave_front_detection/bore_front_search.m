@@ -1,4 +1,4 @@
-function [xylog,bblog,fnlog] = bore_front_search_v5(Q0,nx,ny,r0,Qmin,Qstd,Nstd,plotter);
+function [xylog,bblog,fnlog] = bore_front_search(Q0,nx,ny,r0,Qmin,Qstd,Nstd,plotter);
 %
 % USAGE: xylog= bore_front_search_v2(Q0,nx,ny,r0,Qmin,Qstd,Nstd);
 %
@@ -8,9 +8,10 @@ function [xylog,bblog,fnlog] = bore_front_search_v5(Q0,nx,ny,r0,Qmin,Qstd,Nstd,p
 % method based on Celona et al 2019 (not sure of year)
 %
 % $$$ figure, imagesc(Q0)
-ax = gca;
 if ~exist('plotter','var')
     plotter=0;
+else
+    ax = gca;
 end
 %
 % radon transform resolution (want pixel in center of circle)
@@ -158,8 +159,13 @@ while max(Q1(:) - yesF(:).*Q1(:)-nonF(:).*Q1(:))>(Nstd*Qstd) & (loop/Npts<4/r0 |
     %
     %
     % least-squares fit for the line of maximum variance
-    bb0 = [0*X(in)+1 X(in)+x0]\(Y(in)+y0);
+    mtx = [0*X(in)+1 X(in)+x0];
+    if rank(mtx)<min(size(mtx))
+        theta=pi/2;
+    else
+    bb0   = mtx\(Y(in)+y0);
     theta = atan(bb0(2));
+    end
     %
     % the slope should have some standard limits (not propagating offshore or perfectly alongshore)
     if abs(theta*180/pi)>55 & abs(theta*180/pi)<125
@@ -254,7 +260,12 @@ while max(Q1(:) - yesF(:).*Q1(:)-nonF(:).*Q1(:))>(Nstd*Qstd) & (loop/Npts<4/r0 |
 % $$$     hold on, plot(X2log,Y2log,'.b')
     %
     % recompute the slope/intercept of the maximum
-    bb0 = [0*X2log+1 X2log]\Y2log;
+    mtx = [0*X2log+1 X2log];
+    if rank(mtx)<min(size(mtx))
+        bb0 = [0; 0];
+    else
+        bb0 = mtx\Y2log;
+    end
     %
     % move search radius r0 to a new (x0,y0) along the maximum
     % if this is a newFront we can go left or right... let's decide:

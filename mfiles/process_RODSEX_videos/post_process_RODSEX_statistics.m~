@@ -1,0 +1,37 @@
+clear all
+close all
+load('/data0/ShortCrests/IMG/RODSEX_IMG_FRONT_STATS.mat')
+%
+%
+% first, plot L(x,t)
+figure, imagesc(L,'AlphaData',~isnan(L))
+%
+% note, the time vector jumps... construct the datenum vector
+time_img = datenum( [cell2mat(yyyymmdd), cell2mat(HH)] ,'yyyymmddHH');
+%
+%% look at each pdf(L), should be decaying...
+%  can we use this to filter videos with poor crest identification?
+ii=149
+hold on, semilogx(lbins,squeeze(P(23,:,ii)))
+%
+% cross-shore location of long crests:
+Pxt = squeeze(sum(P,2,'omitnan'));
+xL  = sum(xbins'.*Pxt,1,'omitnan')./sum(Pxt,1,'omitnan'); %sum( xbins'.*L,1,'omitnan')./sum(L,1,'omitnan');
+% image times
+idx    = find(~isnan(xL));
+%
+% so, lets see if there's a relationship between tide level and crest length.
+[time_tide,zw] = load_FRF_waterlevels(yyyymmdd{idx(1)},yyyymmdd{idx(end)});
+% convert from GMT to EDT
+time_tide = time_tide-4/24;
+%
+%
+figure, plot(time_tide,zw,'-k',time_img,(xL-mean(xL,'omitnan'))/mean(xL,'omitnan'),'.r')
+%
+zw_img = interp1(time_tide,zw,time_img(idx));
+xL_img = xL(idx)';
+[rho,pval] = corr(zw_img,xL_img);
+figure, plot(zw_img,xL_img,'*');
+%
+%
+% get wave heights, too
