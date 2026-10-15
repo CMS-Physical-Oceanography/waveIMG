@@ -1,0 +1,394 @@
+% CREST LENGTH, POINT-WISE -- from bore_front_search_length rcsummary (xc, yc, width, length)
+%
+% Parallel version of crest_length_analysis2.m. That script represents each
+% crest by a SINGLE point -- its centroid -- and assigns the crest's total
+% length L to that one point. A 40 m crest gets exactly the same weight in
+% the stats/maps as a 4 m crest, and a long crest only shows up in whichever
+% single alongshore bin its centroid happens to land in, even though it
+% physically spans many bins.
+%
+% This script instead RECONSTRUCTS each crest as a set of points sampled
+% along its length. rcsummary has no native per-point coordinates, so, as in
+% the original diagnostic figure, a crest is approximated as a straight
+% alongshore segment of length L centred on (xc,yc) at fixed cross-shore
+% position xc. Every surviving crest is resampled at pt_spacing intervals
+% along that segment, the crest's length L is logged at EVERY resampled
+% point, and all downstream stats/binning/plots are built from that
+% point-level table instead of one row per crest. Practically:
+%   - a long crest is spread across every alongshore bin it crosses, not
+%     just the bin containing its centroid, and
+%   - a long crest contributes proportionally more points (i.e. more
+%     weight) to the length statistics than a short one.
+%
+% Edge handling: same idea as the original, but now applied per
+% reconstructed point instead of per (centroid, two ends) triple -- a point
+% is discarded if IT lies within edge_buffer of the domain edge, so part of
+% a crest can be kept while another part (near the edge) is dropped.
+
+%% USER INPUT
+dateTag  = '1002';    % MMDD
+hourStr  = '1200';    % HHMM
+year_str = '2013';    % survey / tide file year
+
+min_crest_len = 3;    % m, discard crests shorter than this (noise floor)
+edge_buffer   = 5;    % m, discard a POINT reaching this close to the domain edge
+pt_spacing    = 1;    % m, spacing between reconstructed along-crest points
+bin_size      = 5;    % m, map grid
+xprof_bin     = 5;    % m, cross-shore profile bin
+min_samples   = 5;    % min POINTS in a map bin before it's plotted
+min_prof      = 10;   % min POINTS in a cross-shore bin before it's plotted
+
+show_domain_check = true;
+
+baseDir = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/' ...
+'waveIMG_cpy/waveIMG-main/waveIMG-main'];
+
+%% LOAD
+matFile = fullfile(baseDir,'mat_data',sprintf('%s_%s.mat',dateTag,hourStr));
+S  = load(matFile, 'all_crest_summary','X','Y');
+CS = S.all_crest_summary;
+Xg = S.X(:).';
+Yg = S.Y(:).';
+dateTimeLabel = sprintf('%s/%s %s:%s', dateTag(1:2), dateTag(3:4), hourStr(1:2), hourStr(3:4));
+
+R = load(matFile, 'rectified_frames');
+bg = [];
+for kk = 1:numel(R.rectified_frames)
+    if ~isempty(R.rectified_frames{kk}); bg = R.rectified_frames{kk}; break; end
+end
+clear R
+if isempty(bg)
+    error('No non-empty rectified_frames in %s -- cannot define the domain footprint.', matFile);
+end
+valid = ~isnan(bg);
+fprintf('Rectified footprint: %d / %d grid cells valid (%.1f%%)\n', ...
+    nnz(valid), numel(valid), 100*nnz(valid)/numel(valid));
+
+%% DOMAIN EDGE
+vpad = false(size(valid)+2);
+vpad(2:end-1,2:end-1) = valid;
+edge_cell = valid & ( ~vpad(1:end-2,2:end-1) | ~vpad(3:end,2:end-1) | ...
+                      ~vpad(2:end-1,1:end-2) | ~vpad(2:end-1,3:end) );
+[er, ec] = find(edge_cell);
+edge_xy  = [reshape(Xg(ec),[],1), reshape(Yg(er),[],1)];
+fprintf('Domain boundary cells: %d\n', size(edge_xy,1));
+
+%% FLATTEN rcsummary -> one row per crest (identical to crest_length_analysis2.m)
+rows = cell(numel(CS),1);
+nfr  = 0;
+for k = 1:numel(CS)
+    r = CS{k};
+    if isempty(r) || ~isstruct(r); continue; end
+    nfr = nfr + 1;
+    L  = [r.length].';  xc = [r.xc].';  yc = [r.yc].';  wd = [r.width].';
+    n  = min([numel(L) numel(xc) numel(yc) numel(wd)]);
+    rows{k} = [repmat(k,n,1), L(1:n), xc(1:n), yc(1:n), wd(1:n)];
+end
+A = vertcat(rows{:});                       % [frame, L, xc, yc, width]
+fprintf('Frames with crests: %d | raw crests: %d\n', nfr, size(A,1));
+
+good = isfinite(A(:,2)) & isfinite(A(:,3)) & isfinite(A(:,4)) & A(:,2) >= min_crest_len;
+A = A(good,:);
+nCrest = size(A,1);
+fprintf('After length >= %.1f m: %d crests\n', min_crest_len, nCrest);
+
+%% RECONSTRUCT ALONG-CREST POINTS
+% Every surviving crest is resampled at pt_spacing along its alongshore
+% segment [yc-L/2, yc+L/2] at fixed x = xc, with a floor of 2 points/crest
+% so even a sub-pt_spacing crest is represented by its two approximate ends.
+crestID = (1:nCrest).';
+nPts    = max(round(A(:,2)/pt_spacing) + 1, 2);
+
+frame_p = repelem(A(:,1), nPts);
+cid_p   = repelem(crestID, nPts);
+L_p     = repelem(A(:,2), nPts);
+x_p     = repelem(A(:,3), nPts);
+width_p = repelem(A(:,5), nPts);
+
+yseg = arrayfun(@(i) linspace(A(i,4)-A(i,2)/2, A(i,4)+A(i,2)/2, nPts(i)).', ...
+                (1:nCrest).', 'UniformOutput', false);
+y_p = vertcat(yseg{:});
+
+P = [frame_p, L_p, x_p, y_p, width_p, cid_p];   % [frame, L, x, y, width, crestID]
+fprintf('Reconstructed %d along-crest points from %d crests (%.1f pts/crest avg, %.1f m spacing)\n', ...
+    size(P,1), nCrest, size(P,1)/nCrest, pt_spacing);
+
+%% EDGE TEST -- every reconstructed point, individually
+qx = P(:,3); qy = P(:,4);
+[~, dq] = knnsearch(edge_xy, [qx qy]);
+iX = min(max(round(interp1(Xg, 1:numel(Xg), qx, 'nearest','extrap')),1), numel(Xg));
+iY = min(max(round(interp1(Yg, 1:numel(Yg), qy, 'nearest','extrap')),1), numel(Yg));
+dq(~valid(sub2ind(size(valid), iY, iX))) = 0;
+
+crest_log = [P, dq, double(dq >= edge_buffer)];  % [frame,L,x,y,width,crestID,d_edge,keep]
+kept = crest_log(:,8) == 1;
+
+fprintf('Kept points: %d | rejected at edge: %d (%.1f%%)\n', ...
+    sum(kept), sum(~kept), 100*mean(~kept));
+fprintf('Crests with >=1 surviving point: %d / %d\n', ...
+    numel(unique(crest_log(kept,6))), nCrest);
+fprintf('Point-weighted crest length: mean %.1f m | median %.1f m | p95 %.1f m | max %.1f m\n', ...
+    mean(crest_log(kept,2)), median(crest_log(kept,2)), ...
+    prctile(crest_log(kept,2),95), max(crest_log(kept,2)));
+
+xm = crest_log(kept,3);
+ym = crest_log(kept,4);
+Lm = crest_log(kept,2);
+
+%% DOMAIN / BUFFER CHECK FIGURE
+if show_domain_check
+    [XX, YY] = meshgrid(Xg, Yg);
+    d_grid = nan(size(valid));
+    [~, dv] = knnsearch(edge_xy, [XX(valid), YY(valid)]);
+    d_grid(valid) = dv;
+
+    figure; hold on
+    h = imagesc(Xg, Yg, d_grid);
+    set(h,'AlphaData',~isnan(d_grid))
+    set(gca,'YDir','normal')
+    cmocean('-gray');
+    cb = colorbar; cb.Label.String = 'Distance to domain edge [m]';
+    clim([0 40])
+    contour(Xg, Yg, d_grid, [edge_buffer edge_buffer], 'Color',[0.85 0.10 0.10], 'LineWidth',1.5);
+    scatter(crest_log(~kept,3), crest_log(~kept,4), 4, [0.85 0.10 0.10], 'filled', ...
+        'MarkerFaceAlpha', 0.15)
+    scatter(crest_log(kept,3),  crest_log(kept,4),  4, [0.10 0.30 0.80], 'filled', ...
+        'MarkerFaceAlpha', 0.15)
+    axis tight; box on
+    xlabel('Cross-shore [m]'); ylabel('Alongshore [m]')
+    title(sprintf('Rectified Footprint, %.0f m Edge Buffer - %s', edge_buffer, dateTimeLabel), ...
+        'FontSize', 15)
+    text(0.02, 0.97, sprintf('red = rejected points (%d)   blue = kept points (%d)', ...
+        sum(~kept), sum(kept)), ...
+        'Units','normalized', 'VerticalAlignment','top', 'FontWeight','bold')
+end
+
+%% BIN THE RECONSTRUCTED POINTS
+x_edges = min(xm) : bin_size : max(xm) + bin_size;
+y_edges = min(ym) : bin_size : max(ym) + bin_size;
+x_centers = x_edges(1:end-1) + bin_size/2;
+y_centers = y_edges(1:end-1) + bin_size/2;
+n_xbins = numel(x_centers);
+n_ybins = numel(y_centers);
+
+xi = discretize(xm, x_edges);
+yi = discretize(ym, y_edges);
+ok = ~isnan(xi) & ~isnan(yi);
+
+lin   = sub2ind([n_ybins n_xbins], yi(ok), xi(ok));        counts all pts, new is only one count per bin touched..
+% N     = n_ybins * n_xbins;
+% sum_v = accumarray(lin, Lm(ok), [N 1], @sum, 0);
+% n_v   = accumarray(lin, 1,      [N 1], @sum, 0);
+
+%% DEDUPE: one row per (crest, bin) -- removes the length-oversampling bias
+% Each crest gets weight 1 in every bin it touches, regardless of how many
+% along-crest points happened to land there. This keeps the point method's
+% correct spatial footprint (a long crest still shows up in every bin it
+% crosses) without letting a long crest out-vote short crests within a bin
+% just because it was resampled more times.
+crestIDm = crest_log(kept,6);
+
+[~, iu] = unique([crestIDm(ok), lin], 'rows');
+lin_u = lin(iu);
+Lm_u  = Lm(ok); Lm_u = Lm_u(iu);
+
+N     = n_ybins * n_xbins;
+sum_v = accumarray(lin_u, Lm_u, [N 1], @sum, 0);
+n_v   = accumarray(lin_u, 1,    [N 1], @sum, 0);
+% % % % % 
+
+len_vec = nan(N,1);
+keep_bin = n_v >= min_samples;
+len_vec(keep_bin) = sum_v(keep_bin) ./ n_v(keep_bin);
+
+len_grid = reshape(len_vec, [n_ybins n_xbins]);
+n_grid   = reshape(n_v,     [n_ybins n_xbins]);
+fprintf('Map bins with >= %d points: %d / %d\n', min_samples, sum(keep_bin), N);
+
+%% PLOT -- mean crest length map (point-weighted)
+figure
+h = imagesc(x_centers, y_centers, len_grid);
+set(h,'AlphaData',~isnan(len_grid))
+set(gca,'YDir','normal')
+axis tight; box on; grid minor
+cmocean('-thermal');
+cb = colorbar; cb.Label.String = 'Mean crest length [m] (point-weighted)';
+clim([0 100]);
+xlabel('Cross-shore [m]'); ylabel('Alongshore [m]')
+title("Mean Crest Length, Point-Weighted - " + string(dateTimeLabel));
+xlim([90 170]); ylim([602 1000])
+
+%% PLOT -- along-crest point count per bin
+figure
+h = imagesc(x_centers, y_centers, n_grid);
+set(h,'AlphaData',n_grid > 0)
+set(gca,'YDir','normal')
+axis tight; box on; grid minor
+cmocean('-gray');
+cb = colorbar; cb.Label.String = 'Along-crest points per bin';
+clim([0 20000])
+xlabel('Cross-shore [m]'); ylabel('Alongshore [m]')
+title(sprintf('Along-Crest Point Counts - %s', dateTimeLabel))
+xlim([90 170]); ylim([602 1000])
+
+%% PLOT -- mean crest length vs cross-shore (point-weighted)
+xp_edges   = floor(min(xm)/xprof_bin)*xprof_bin : xprof_bin : ceil(max(xm)/xprof_bin)*xprof_bin + xprof_bin;
+xp_centers = xp_edges(1:end-1) + xprof_bin/2;
+nb = numel(xp_centers);
+
+bi   = discretize(xm, xp_edges);
+okp  = ~isnan(bi);
+n_p    = accumarray(bi(okp), 1,       [nb 1], @sum,  0);
+mean_p = accumarray(bi(okp), Lm(okp), [nb 1], @mean, NaN);
+std_p  = accumarray(bi(okp), Lm(okp), [nb 1], @std,  NaN);
+
+thin = n_p < min_prof;
+mean_p(thin) = NaN;
+std_p(thin)  = NaN;
+
+figure
+subplot(3,1,[1 2]); hold on
+scatter(xm, Lm, 4, [0.30 0.55 0.95], 'filled', 'MarkerFaceAlpha', 0.06)
+errorbar(xp_centers, mean_p, std_p, 'o-', 'Color',[0.10 0.30 0.80], ...
+    'MarkerFaceColor',[0.10 0.30 0.80], 'MarkerSize',6, 'LineWidth',1.5, 'CapSize',4)
+box on; grid minor; set(gca,'Layer','top')
+ylabel('Crest length [m]')
+title(sprintf('Mean Crest Length vs Cross-shore, Point-Weighted - %s (%.0f m bins, \\pm1\\sigma)', ...
+    dateTimeLabel, xprof_bin), 'FontSize', 15)
+xlim([min(xp_edges) max(xp_edges)])
+ylim([0 ceil(prctile(Lm,99)/5)*5])
+
+subplot(3,1,3)
+bar(xp_centers, n_p, 1, EdgeColor='none');
+box on; grid minor; set(gca,'Layer','top')
+xlabel('Cross-shore [m]'); ylabel('Point Count')
+xlim([min(xp_edges) max(xp_edges)])
+
+%% ================= CREST LENGTH vs SURVEYED DEPTH =================
+surveyDir = fullfile(baseDir,'data','bathy_surveys');
+tideFile  = fullfile(baseDir,'data','tide_duck','duck_waterLvls2013.csv');
+
+sf = fullfile(surveyDir, sprintf('RODDebbieTimeLagFix_%s%s.xyz', year_str, dateTag));
+if ~isfile(sf)
+    dlist = dir(fullfile(surveyDir,'RODDebbieTimeLagFix_*.xyz'));
+    if isempty(dlist); error('No survey files found in %s', surveyDir); end
+    dts = NaT(numel(dlist),1);
+    for k = 1:numel(dlist)
+        tok = regexp(dlist(k).name,'(\d{8})','tokens','once');
+        if ~isempty(tok); dts(k) = datetime(tok{1},'InputFormat','yyyyMMdd'); end
+    end
+    target = datetime([year_str dateTag],'InputFormat','yyyyMMdd');
+    [~, ibn] = min(abs(dts - target));
+    sf = fullfile(surveyDir, dlist(ibn).name);
+    warning('No survey for %s -- using nearest (%s, %+d days).', ...
+        dateTag, dlist(ibn).name, days(dts(ibn)-target));
+end
+
+Tt = readtable(tideFile,'TextType','string');
+tideTime = datetime(Tt.Date,'InputFormat','yyyy/MM/dd') + ...
+           duration(Tt.Time_LST_LDT_,'InputFormat','hh:mm');
+yr = str2double(year_str); mo = str2double(dateTag(1:2));
+dy = str2double(dateTag(3:4)); hr = str2double(hourStr(1:2));
+w0 = datetime(yr,mo,dy,hr,0,0);
+inW = tideTime >= w0 & tideTime < w0 + hours(1);
+tide = mean(Tt.Verified_m_(inW),'omitnan');
+fprintf('Tide for %s %s: %.2f m NAVD88\n', dateTag, hourStr, tide);
+
+Dxyz = readmatrix(sf,'FileType','text');
+inb  = Dxyz(:,2) >= min(ym) & Dxyz(:,2) <= max(ym);
+sx = Dxyz(inb,1); sz = Dxyz(inb,3);
+
+bz  = discretize(sx, xp_edges);
+okz = ~isnan(bz);
+z_mean = accumarray(bz(okz), sz(okz), [nb 1], @mean, NaN);
+z_std  = accumarray(bz(okz), sz(okz), [nb 1], @std,  NaN);
+n_z    = accumarray(bz(okz), 1,       [nb 1], @sum,  0);
+z_mean(n_z < 5) = NaN;  z_std(n_z < 5) = NaN;
+h_mean = tide - z_mean;
+
+xbar = NaN;
+lmax = islocalmax(z_mean,'MinProminence',0.05);
+if any(lmax)
+    ibl = find(lmax); [~,j] = max(z_mean(ibl)); xbar = xp_centers(ibl(j));
+end
+[~, ipk] = max(mean_p);  xpk = xp_centers(ipk);
+fprintf('Crest-length peak (point-weighted): x = %.1f m | bar crest: x = %.1f m | offset %+.1f m\n', ...
+    xpk, xbar, xpk - xbar);
+if ~isnan(xbar)
+    fprintf('Still-water depth over the bar: %.2f m | alongshore std of bed there: %.2f m\n', ...
+        tide - max(z_mean(lmax)), z_std(ibl(j)));
+end
+
+% ---- dual-axis plot ------------------------------------------------------
+c_len = [0.10 0.30 0.80];
+
+figure
+yyaxis left
+plot(xp_centers, mean_p, 'o-', 'Color',c_len, ...
+    'MarkerFaceColor',c_len, 'MarkerSize',7, 'LineWidth',1.8)
+ylabel('Mean crest length [m] (point-weighted)')
+ylim([0 ceil(max(mean_p)/10)*10])
+
+yyaxis right
+plot(xp_centers, h_mean, '-', 'Color','k', 'LineWidth',2.5)
+ylabel('Depth [m]')
+set(gca,'YDir','reverse')
+
+ax = gca;
+ax.YAxis(1).Color = c_len;
+ax.YAxis(2).Color = 'k';
+
+grid minor; box on; set(ax,'Layer','top')
+xlabel('Cross-shore [m]')
+xlim([min(xp_edges) max(xp_edges)])
+title(sprintf('Crest Length and Bathymetry, Point-Weighted - %s', dateTimeLabel),'FontSize',15)
+
+%% ============================ DIAGNOSTIC ============================
+% One frame: each crest's full alongshore backbone is drawn in grey (as in
+% the original diagnostic), with the individual RECONSTRUCTED points
+% overlaid and colour-coded by their OWN keep/reject status -- showing
+% that a single long crest can have part of its length kept and part
+% rejected near the domain edge, which the whole-crest test in
+% crest_length_analysis2.m could not represent.
+[uft, ~, gft] = unique(crest_log(:,1));
+cnt_kept = accumarray(gft, crest_log(:,8), [], @sum);
+[~, ibest] = max(cnt_kept);
+fsel = uft(ibest);
+selFrame = crest_log(:,1) == fsel;
+
+figure; hold on
+if exist('d_grid','var')
+    contour(Xg, Yg, d_grid, [edge_buffer edge_buffer], 'Color',[0.85 0.10 0.10], 'LineWidth',1.2);
+end
+
+cidsSel = unique(crest_log(selFrame,6));
+for q = 1:numel(cidsSel)
+    idc = crest_log(:,6) == cidsSel(q) & selFrame;
+    yy  = crest_log(idc,4);
+    xx0 = crest_log(idc,3);
+    L0  = crest_log(idc,2);
+    kk0 = crest_log(idc,8) == 1;
+    col = cmap_diag(q);
+
+    % full backbone (grey), regardless of kept/rejected
+    plot([xx0(1) xx0(1)], [min(yy) max(yy)], '-', 'Color',[0.75 0.75 0.75], 'LineWidth',1.5)
+
+    % reconstructed points, colour-coded by their own keep/reject status
+    scatter(xx0(kk0),  yy(kk0),  22, col, 'filled')
+    scatter(xx0(~kk0), yy(~kk0), 30, [0.85 0.10 0.10], 'x', 'LineWidth',1.5)
+
+    if any(kk0)
+        text(xx0(1)+3, mean(yy(kk0)), sprintf('%.0f m', L0(1)), 'FontSize',9, 'FontWeight','bold')
+    end
+end
+set(gca,'YDir','normal'); axis equal; box on; grid minor
+xlabel('Cross-shore [m]'); ylabel('Alongshore [m]')
+title(sprintf('Reconstructed along-crest points, frame %d (%d crests, %d kept pts, %d rejected pts)', ...
+    fsel, numel(cidsSel), sum(crest_log(selFrame,8)==1), sum(crest_log(selFrame,8)==0)), 'FontSize', 14)
+
+%% LOCAL FUNCTION
+function c = cmap_diag(i)
+base = [0.00 0.45 0.74; 0.85 0.33 0.10; 0.49 0.18 0.56; 0.47 0.67 0.19;
+        0.30 0.75 0.93; 0.64 0.08 0.18; 0.93 0.69 0.13; 0.20 0.20 0.20];
+c = base(mod(i-1, size(base,1))+1, :);
+end

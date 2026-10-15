@@ -1,1 +1,18 @@
-Prezley's dir
+***** Prezley's Directory *****
+
+SUBFOLDERS:
+
+main_workflow - MATLAB scripts for processing new mp4s, including: crest tracking with CNN, tracking-derived celerity, bathy inversions, PIV correction, breaking force + vorticity estimation
+
+	* MAIN_FLOW_RECENT.m - 
+		input: mp4 year/date/time
+		output: 
+
+
+analysis -   
+
+
+diagnostic_visualization - 
+
+
+archive_code - old/unused scripts backup
