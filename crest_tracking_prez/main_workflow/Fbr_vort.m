@@ -9,8 +9,8 @@ year_str = '2013';
 data_source = 'piv';     % 'raw' or 'piv'
 
 %% LOAD MAT FILE
-baseDir = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main'];
-matDataDir = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/mat_data'];
+baseDir = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main'];
+matDataDir = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/mat_data'];
 t_load = tic;
 S = load(fullfile(matDataDir,sprintf('%s_%s.mat',dateTag,hourStr)));
 fprintf('LOAD MAT FILE: %.1f s\n', toc(t_load));
@@ -104,7 +104,7 @@ fprintf('Celerity points with matched crest width: %d / %d\n', sum(has_width), n
 
 %% period and tide
 fname = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/' ...
-    'RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/data/buoy_data/duck_offshore_cond.txt'];
+    'RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/buoy_data/duck_offshore_cond.txt'];
 opts = detectImportOptions(fname,'NumHeaderLines',2);
 T = readtable(fname,opts);
 T.Properties.VariableNames = {'YY','MM','DD','hh','mm','WDIR','WSPD','GST','WVHT','DPD','APD','MWD','PRES','ATMP','WTMP','DEWP','VIS','TIDE'};

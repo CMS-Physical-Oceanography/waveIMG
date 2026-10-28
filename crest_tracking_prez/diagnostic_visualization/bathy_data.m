@@ -1,6 +1,6 @@
 
 % debbie bathy raw
-filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/' ...
+filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
     'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131002.xyz'];
 data = readmatrix(filename,'FileType','text');
 
@@ -18,7 +18,7 @@ colorbar
 
 %% debbie interp - linear interpolation for visualization
 
-filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/' ...
+filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
     'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131002.xyz'];
 data = readmatrix(filename,'FileType','text');
  
@@ -44,20 +44,20 @@ set(gca,'YDir','normal')
 axis tight
 box on
 grid minor
-% cb = colorbar;
-% cb.Label.String = 'Depth [m]';
+cb = colorbar;
+cb.Label.String = 'Depth [m]';
 colormap(flipud(parula))
 clim([0 3])
 xlabel('Cross-Shore [m]')
 ylabel('Alongshore [m]')
-% title('Interpolated Survey Bathy', FontSize=15)
+title('Interpolated Survey Bathy, 10/2/2013')
 
 xlim([90 170])
 ylim([602 1000])
 
 %%
 % FRF LARC survey raw
-filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/' ...
+filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
     'waveIMG-main/waveIMG-main/data/surveys for prezley/FRF_20210830_1210_DUNEX_NAVD88_LARC_GPS_UTC_v20210831.csv'];
 data = readmatrix(filename,'FileType','text');
 
@@ -75,10 +75,10 @@ colorbar
 
 %% FRF larc survey interpolated
 
-% filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/' ...
+% filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
 %     'waveIMG-main/waveIMG-main/data/surveys for prezley/FRF_20210907_1213_DUNEX_NAVD88_LARC_GPS_UTC_v20210911.csv'];
 
-filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/'...
+filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/'...
     'waveIMG-main/waveIMG-main/data/bathy_surveys/FRF_20180919_1154_FRF_NAVD88_LARC_GPS_UTC_v20180920.csv']
 data = readmatrix(filename,'FileType','text');
 
@@ -135,7 +135,7 @@ ylim([602 1000])
 %% backpack eps survey 2022
 
 filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/' ...
-    'RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/data/bathy_surveys/' ...
+    'RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/bathy_surveys/' ...
     '2022_BIASEX_debby_backpack.eps'];
 
 data = readmatrix(filename, 'FileType', 'text');

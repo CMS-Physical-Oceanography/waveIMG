@@ -25,29 +25,36 @@ info.wndw = 20;    info.stp = 10;
 info.minvar = 100; info.maxskew = 2; info.minent = 6;
 
 %% ---------- per-camera video settings / overrides
-info.base_dir      = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/data/mp4';
-info.folder_layout = 'flat';      % 'flat' = files directly in vid_dir; 'date_hour' = vid_dir/<dateTag>/<hour>/
+info.base_dir      = '/Volumes/RODSEX Video';
+info.folder_layout = 'flat';   % 'flat'            : files directly in base_dir/vid_dir
+                               % 'datehour_folder' : base_dir/vid_dir/<yyyymmdd>_<hh>/
+                               % 'date_hour'       : base_dir/vid_dir/<dateTag>/<HH00>/
 
 switch ID
     case 'top21'
-        info.vid_dir       = '2021';
+        info.vid_dir       = 'DunexMP4';
         info.vid_name_root = 'Dunex_NorthTower';
 
     case 'bot21'
-        info.vid_dir       = '2021';
+        info.vid_dir       = 'DunexMP4';
         info.vid_name_root = 'Dunex_SouthTower';   % TODO: confirm against your files
 
     case {'top18','bot18'}
-        info.vid_dir       = '2018';
-        info.vid_name_root = 'TODO';
+        info.vid_dir       = 'RSEX18MP4';
+        info.vid_name_root = 'TODO';               % TODO: check filenames in that folder
 
     case 'rod13'
-        info.base_dir      = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_eddie/mp4';
-        info.vid_dir       = '2013';
-        info.folder_layout = 'date_hour';          % .../2013/<MMDD>/<HH00>/
-        info.vid_name_root = '';                   % names start with yyyymmdd_hhmmss_, no prefix
+        info.vid_dir       = '';                   % hour folders sit at the drive root
+        info.folder_layout = 'datehour_folder';    % e.g. /Volumes/RODSEX Video/20131024_12/
+        info.vid_name_root = '';                   % names start with yyyymmdd_hhmmss_
 
     otherwise
         error('define_camera_parameters_new:NoVideoSettings', ...
               'No video settings defined for ID ''%s''. Add a case here.', ID);
+end
+
+%% ---------- derived quantities
+info.X_res = (info.X_max - info.X_min)/(info.Nx - 1);
+info.Y_res = (info.Y_max - info.Y_min)/(info.Ny - 1);
+
 end

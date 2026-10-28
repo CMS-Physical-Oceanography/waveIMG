@@ -4,7 +4,7 @@
 % 3. pressure, prob, intens time series
 
 %% 1. sensor loc
-filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/' ...
+filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
     'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131002.xyz'];
 data = readmatrix(filename,'FileType','text');
 x = data(:,1);
@@ -42,7 +42,7 @@ title('Sensor 22 Location')
 xlim([74.6 250.4]); ylim([589.6 1000.4]); % matches tracking animation plot
 
 %% 2. paros pressure sensor time series plot
-filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/' ...
+filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
     'waveIMG-main/waveIMG-main/data/sensor_data/10021200.q22']; % using q22
 
 fid = fopen(filename,'r');
@@ -74,8 +74,8 @@ grid on
 %% pres, intens, prob plots - time-synced with cross corr - 7/25
 
 filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/' ... % check date/time
-    'RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/data/sensor_data/10021200.q22'];
-load(['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/' ...
+    'RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/sensor_data/10021200.q22'];
+load(['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/' ...
     'waveIMG-main/mat_data/sensor_timeseries/sensor_1002_1200.mat'], 'sensors')
 
 xstart = 60; % plot start time

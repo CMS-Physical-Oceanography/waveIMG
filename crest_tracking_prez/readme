@@ -58,16 +58,7 @@ FOLDERS (indicated with %) + MATLAB scripts (indicated with *)
 *******************************************************************************************
 
 
-% data - mp4s, PIV-currents, bathy surveys, in-situ pressure sensors used for crest tracking + analysis
-
-	% 2013 - 
-	
-	% 2018
-		
-
-
-
-*******************************************************************************************
+... moved this to OneDrive b/c files are huge
 
 
 % mat_data - .mat data from completed tracking (ran through MAIN_FLOW_RECENT.m), contains variables (celerity, crest width, etc.) used for analysis

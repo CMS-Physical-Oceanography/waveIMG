@@ -33,7 +33,7 @@ xlimPlot = [90 170];  ylimPlot = [602 840];   % same view as PIV_correction.m
 dateLabel     = sprintf('%s/%s', dateTag(1:2), dateTag(3:4));
 dateTimeLabel = sprintf('%s, %s', dateLabel, hourStr);
 
-baseDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main';
+baseDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main';
 videoOutputFile = fullfile(baseDir, 'mat_data', sprintf('%s_%s.mat', dateTag, hourStr));
 sensorFile      = fullfile(baseDir, 'data', 'sensor_data', 'RODSEX_sensors_locs.xyz');
 pressDir        = fullfile(baseDir, 'data', 'SURF-AI field data', year_str, 'In situ time series', dateTag);

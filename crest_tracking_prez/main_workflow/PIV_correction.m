@@ -3,7 +3,7 @@
 
 %% USER INPUT -- for data paths               change surveyFile manually if analyzing 10/01 b/c no bathy survey
 dateTag  = '1002';    % MMDD
-hourStr  = '1200';    % HHMM
+hourStr  = '1300';    % HHMM
 year_str = '2013';    % survey file year prefix
 
 bin_size = 5;          % m
@@ -17,7 +17,7 @@ hourLabel = hourStr;                                          % e.g. '1400'
 dateTimeLabel = sprintf('%s, %s', dateLabel, hourLabel);       % e.g. '10/02, 1400'
 
 % derived file paths
-baseDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main';
+baseDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main';
 videoOutputFile = fullfile(baseDir, 'mat_data', sprintf('%s_%s.mat', dateTag, hourStr));
 pivFile         = fullfile(baseDir, 'data', 'PIV_2min', 'PVLAB_PIV_SurfaceFlows.mat');
 surveyDateTag = dateTag;
@@ -426,7 +426,7 @@ sgtitle(sprintf('Normalized Depth Error %s', dateTimeLabel))
 
 dateTag  = '1002'; hourStr = '1300'; year_str = '2013';
 
-baseDir  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main';
+baseDir  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main';
 pivFile  = fullfile(baseDir, 'data', 'PIV_2min', 'PVLAB_PIV_SurfaceFlows.mat');
 matFile  = fullfile(baseDir, 'mat_data', sprintf('%s_%s.mat', dateTag, hourStr));
 

@@ -1,50 +1,66 @@
 
 % main flow
 
-addpath(genpath('../'));
-% [info, icp, beta0] = define_camera_parameters();
+thisDir = fileparts(mfilename('fullpath'));
+addpath(genpath(fullfile(thisDir,'..')));
 
+% [info, icp, beta0] = define_camera_parameters();
 % baseDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/data';
 % matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/mat_data';
 
-baseDataDir = '/Volumes/RODSEX Video/';
-madDataDir  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/mat_data/';
+matDataDir  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/mat_data/'; % processed runs stored on shared onedrive
+if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
-year = 2021;
+
+year = 2013; % INPUT
+runTag = '_test'; % INPUT: set to '' for real runs, '_test' for test runs
 
 switch year
+    case 2013
+        IDs      = {'rod13'};
+        dateTag  = '20131002';       % INPUT: folder prefix, yyyymmdd
+        hourList = 1000;             % INPUT: -> 20131024_HHHH. For several hours: 400:100:1400
+        numFiles = 1;                % INPUT: 5-min videos per hour folder
+        startIdx = 1;
+
     case 2021
         IDs = {'top21','bot21'};
         dateTag  = '20210904_0800_matlab';
-       
+        hourList = 0;
         numFiles = 1;    % # of files to run consecutively in each hour subfolder
-        startIdx = 1;  
-    case 2013
-      IDs = {'rod13'};
-      dateTag  = '0925'; % INPUT: date subfolder
-      hourList = 1700;  % INPUT: hour subfolders to run consecutively (1000, 1100, ... 1700); 1000:100:1700
-      numFiles = 12;    % # of files to run consecutively in each hour subfolder
-      startIdx = 1;  
+        startIdx = 1; 
 end
 
 for year_ID = 1:length(IDs)
     ID = IDs{year_ID};
     [info, icp, beta0] = define_camera_parameters_new(ID);
 
+    if ~exist(info.base_dir, 'dir')
+        error('Video drive not found at %s. Is it plugged in?', info.base_dir); % hard drive check
+    end
+
 for hourVal = hourList % start loop through subfolders
 
     hourStr = sprintf('%04d', hourVal);
-    videoDir = fullfile(baseDataDir,info.vid_dir);
 
-    % if ~exist(videoDir, 'dir')
-    % fprintf('Skipping missing folder: %s\n', videoDir);
-    % continue
-    % end
+    switch info.folder_layout
+        case 'datehour_folder'
+        videoDir = fullfile(info.base_dir, info.vid_dir, [dateTag '_' hourStr(1:2)]);
+        case 'date_hour'
+        videoDir = fullfile(info.base_dir, info.vid_dir, dateTag, hourStr);
+        otherwise   % 'flat'
+        videoDir = fullfile(info.base_dir, info.vid_dir);
+    end
     
-    fileRoot = fullfile(videoDir,[info.vid_name_root,'_',dateTag '*.mp4']);
+    if isempty(info.vid_name_root)
+        fileRoot = fullfile(videoDir, '*.mp4');
+    else
+        fileRoot = fullfile(videoDir, [info.vid_name_root,'_',dateTag,'*.mp4']);
+    end    
+    
     fileList = dir(fileRoot);
-    % [~, sortIdx] = sort({fileList.name});
-    % fileList = fileList(sortIdx);
+    fileList = fileList(~startsWith({fileList.name}, '.'));
+
     
     if isempty(fileList)
         fprintf('No mp4 files found in %s, skipping hour.\n', videoDir);
@@ -170,7 +186,7 @@ while hasFrame(vid) && f < totalFramesNeeded
     f = f + 1;
     frameTimes(f) = vid.CurrentTime;   % actual timestamp of the frame about to be read
     IMG = rgb2gray(readFrame(vid));
-    rawFrames{f} = double(IMG); %#ok<SAGROW>
+    rawFrames{f} = double(IMG);
 end
 
 actualFrames = numel(rawFrames);
@@ -188,8 +204,8 @@ Nx_grid = size(xx, 2); % number of CS grid points (cols)
 
 for k = 1:numberVideoFrames
     for ii = 1:3
-        frame = rgb2gray(readFrame(vid));
-        IMG(:,:,ii) = interp2(U, V, double(frame)/255, Uint, Vint, 'linear', nan);
+           frame = rawFrames{k+ii-1};
+           IMG(:,:,ii) = interp2(U, V, double(frame)/255, Uint, Vint, 'linear', nan);
     end
     rectified_frames{k} = IMG(:,:,2);
     [~, prob, ~, ~, ~] = wave_front_from_IMG_UNET(IMG, X, Y, dt, 0);
@@ -626,8 +642,8 @@ sensorSaveDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmingt
 if ~exist(sensorSaveDir,'dir')
     mkdir(sensorSaveDir)
 end
-save(fullfile(sensorSaveDir, ['sensor_' sensorFileTag '.mat']), 'sensors') % save IMG props at sensor locs
-save(fullfile(matDataDir, sprintf('%s_%s.mat', dateTag, hourStr)), '-v7.3'); % save workspace + output vars
+save(fullfile(sensorSaveDir, ['sensor_' sensorFileTag runTag '.mat']), 'sensors') % save IMG props at sensor locs
+save(fullfile(matDataDir, sprintf('%s_%s.mat', dateTag, hourStr, runTag)), '-v7.3'); % save workspace + output vars
 fprintf('Saved workspace for %s to %s\n', hourStr, matDataDir);
 end
 
