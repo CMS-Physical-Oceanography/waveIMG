@@ -2,33 +2,31 @@
 % main flow
 
 thisDir = fileparts(mfilename('fullpath'));
-addpath(genpath(fullfile(thisDir,'..')));
+addpath(genpath('/Users/prezleystrait/git/waveIMG/mfiles'));        % makeRadialDistortion, etc.
+addpath(genpath(fullfile(thisDir,'..')), '-begin');                 % crest_tracking_prez takes priority
 
-% [info, icp, beta0] = define_camera_parameters();
-% baseDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/data';
-% matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/mat_data';
-
-matDataDir  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/mat_data/'; % processed runs stored on shared onedrive
+matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/mat_data/';
 if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
+runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs)
+maxFrames = 102;        % TEST: cap frames read per video; set to Inf for full videos
 
-year = 2013; % INPUT
-runTag = '_test'; % INPUT: set to '' for real runs, '_test' for test runs
+year = 2013;
 
 switch year
     case 2013
         IDs      = {'rod13'};
-        dateTag  = '20131002';       % INPUT: folder prefix, yyyymmdd
-        hourList = 1000;             % INPUT: -> 20131024_HHHH. For several hours: 400:100:1400
-        numFiles = 1;                % INPUT: 5-min videos per hour folder
+        dateTag  = '20131024';        % folder prefix, yyyymmdd
+        hourList = 1200;              % -> 20131024_12
+        numFiles = 1;                 % TEST: set to 12 for a full hour
         startIdx = 1;
 
     case 2021
-        IDs = {'top21','bot21'};
+        IDs      = {'top21','bot21'};
         dateTag  = '20210904_0800_matlab';
         hourList = 0;
-        numFiles = 1;    % # of files to run consecutively in each hour subfolder
-        startIdx = 1; 
+        numFiles = 1;
+        startIdx = 1;
 end
 
 for year_ID = 1:length(IDs)
@@ -36,46 +34,46 @@ for year_ID = 1:length(IDs)
     [info, icp, beta0] = define_camera_parameters_new(ID);
 
     if ~exist(info.base_dir, 'dir')
-        error('Video drive not found at %s. Is it plugged in?', info.base_dir); % hard drive check
+        error('Video drive not found at %s. Is it plugged in?', info.base_dir);
     end
 
-for hourVal = hourList % start loop through subfolders
+for hourVal = hourList
 
     hourStr = sprintf('%04d', hourVal);
 
     switch info.folder_layout
         case 'datehour_folder'
-        videoDir = fullfile(info.base_dir, info.vid_dir, [dateTag '_' hourStr(1:2)]);
+            videoDir = fullfile(info.base_dir, info.vid_dir, [dateTag '_' hourStr(1:2)]);
         case 'date_hour'
-        videoDir = fullfile(info.base_dir, info.vid_dir, dateTag, hourStr);
+            videoDir = fullfile(info.base_dir, info.vid_dir, dateTag, hourStr);
         otherwise   % 'flat'
-        videoDir = fullfile(info.base_dir, info.vid_dir);
+            videoDir = fullfile(info.base_dir, info.vid_dir);
     end
-    
+
     if isempty(info.vid_name_root)
         fileRoot = fullfile(videoDir, '*.mp4');
     else
         fileRoot = fullfile(videoDir, [info.vid_name_root,'_',dateTag,'*.mp4']);
-    end    
-    
-    fileList = dir(fileRoot);
-    fileList = fileList(~startsWith({fileList.name}, '.'));
+    end
 
-    
+    fileList = dir(fileRoot);
+    fileList = fileList(~startsWith({fileList.name}, '.'));   % drop macOS ._ files
+    [~, sortIdx] = sort({fileList.name});                     % old script sorted by name
+    fileList = fileList(sortIdx);
+
     if isempty(fileList)
         fprintf('No mp4 files found in %s, skipping hour.\n', videoDir);
         continue
     end
-    
+
     selectedFiles = fileList(startIdx : min(startIdx + numFiles - 1, length(fileList)));
     firstVideoFile = selectedFiles(1).name;
     [~, firstBaseName] = fileparts(firstVideoFile);
-    firstTokens = regexp(firstBaseName, '^(\d{8})_(\d{6})_', 'tokens');
-    
+    firstTokens = regexp(firstBaseName, '(\d{8})_(\d{6})', 'tokens');   % no ^ anchor, works for 2021 names too
+
     if ~isempty(firstTokens) && ~isempty(firstTokens{1})
         firstDateToken = firstTokens{1}{1};
         firstTimeToken = firstTokens{1}{2};
-    
         hourStartStamp = datetime(firstDateToken, 'InputFormat', 'yyyyMMdd') + hours(str2double(firstTimeToken(1:2))) + ...
             minutes(str2double(firstTimeToken(3:4))) + seconds(str2double(firstTimeToken(5:6)));
     else
@@ -83,74 +81,60 @@ for hourVal = hourList % start loop through subfolders
     end
 
     all_crest_widths = {};
-    all_crest_width_pts_total  = []; 
-    all_crest_width_time_total = [];   
+    all_crest_width_pts_total  = [];
+    all_crest_width_time_total = [];
     all_celerity_total = [];
     all_celerity_time_total = [];
     all_crest_summary = {};
-    
-    sensors.q22.intensity = []; % paros pressure sensor var storage, q22
+
+    sensors.q22.intensity = [];
     sensors.q22.probability = [];
     sensors.q22.time = [];
-    
+
     sensors.videoTimes = {};
     sensors.videoSeconds = [];
     sensors.videoOffsets = [];
 
-    [U, V]   = meshgrid(0:icp.NU-1, 0:icp.NV-1); % pixel space grid
-    X        = info.X_min:info.X_res:info.X_max; % info.X_res = 0.6863 m
+    [U, V]   = meshgrid(0:icp.NU-1, 0:icp.NV-1);
+    X        = info.X_min:info.X_res:info.X_max;
     Y        = info.Y_min:info.Y_res:info.Y_max;
-    [xx, yy] = meshgrid(X, Y); % phys grid
+    [xx, yy] = meshgrid(X, Y);
     z_tide   = zeros(size(xx));
-    [Uint, Vint] = getUVfromXYZ(xx, yy, z_tide, icp, beta0); % projects phys grid to pix grid
-    Pnon             = 0.15; % prob threshold for front detection; orig 0.25
-
+    [Uint, Vint] = getUVfromXYZ(xx, yy, z_tide, icp, beta0);
+    Pnon     = 0.15;
 
 % in-situ sensors
-sensors.q22.x = 133.4638; % loc
+sensors.q22.x = 133.4638;
 sensors.q22.y = 824.3041;
-% sensors.q23.x = ... or whatev for adding future sensors, and same structure for nearest cell and storage
-
-[~, sensors.q22.ix] = min(abs(X - sensors.q22.x)); % nearest rectified grid cell
+[~, sensors.q22.ix] = min(abs(X - sensors.q22.x));
 [~, sensors.q22.iy] = min(abs(Y - sensors.q22.y));
 
-
-for fnum = 1:numel(selectedFiles) % BIG LOOP - for selected # of vid files
+for fnum = 1:numel(selectedFiles)
 
 videoFile = selectedFiles(fnum).name;
 videoPath = fullfile(videoDir, videoFile);
 
-[~, baseName] = fileparts(videoFile); % parse date/time from video filename
-tokens = regexp(baseName, '^(\d{8})_(\d{6})_', 'tokens');
+[~, baseName] = fileparts(videoFile);
+tokens = regexp(baseName, '(\d{8})_(\d{6})', 'tokens');
 
 if ~isempty(tokens)
-    if iscell(tokens{1}) && numel(tokens{1}) >= 2
-        dateToken = tokens{1}{1};
-        timeToken = tokens{1}{2};
-    elseif iscell(tokens) && numel(tokens) >= 2
-        dateToken = tokens{1};
-        timeToken = tokens{2};
-    else
-        error('Could not parse date/time from file: %s', videoFile);
-    end
+    dateToken = tokens{1}{1};
+    timeToken = tokens{1}{2};
 
-    hour   = str2double(timeToken(1:2));
-    minute = str2double(timeToken(3:4));
-    second = str2double(timeToken(5:6));
+    fh = str2double(timeToken(1:2));     % renamed so they don't shadow hour/minute/second
+    fm = str2double(timeToken(3:4));
+    fs = str2double(timeToken(5:6));
 
-    fileStartStamp = datetime(dateToken, 'InputFormat', 'yyyyMMdd') + hours(hour) + minutes(minute) + seconds(second);
+    fileStartStamp = datetime(dateToken, 'InputFormat', 'yyyyMMdd') + hours(fh) + minutes(fm) + seconds(fs);
 
-    sensors.videoTimes{fnum} = sprintf('%02d:%02d:%02d', hour, minute, second);
-    sensors.videoSeconds(end+1) = second;
-    sensors.videoOffsets(end+1) = minute*60 + second;
-
+    sensors.videoTimes{fnum} = sprintf('%02d:%02d:%02d', fh, fm, fs);
+    sensors.videoSeconds(end+1) = fs;
+    sensors.videoOffsets(end+1) = fm*60 + fs;
     sensors.videoStartStamps(fnum) = fileStartStamp;
 else
-    sensors.videoTimes{fnum} = 'unknown';
-    sensors.videoSeconds(end+1) = NaN;
-    sensors.videoOffsets(end+1) = NaN;
+    error('Could not parse date/time from file: %s', videoFile);
 end
-fprintf('\n=== Processing file %d/%d: %s ===\n', fnum, numFiles, videoFile);
+fprintf('\n=== Processing file %d/%d: %s ===\n', fnum, numel(selectedFiles), videoFile);
 
 if ~exist(videoPath, 'file')
     warning('Missing video file, skipping: %s', videoPath);
@@ -165,18 +149,16 @@ catch
 end
 
 vidHz = vid.FrameRate;
-% invRate           = round(vidHz / info.freq); 
 invRate = 1;
-dt = invRate / vidHz;   % actual time between processed frames, accounts for rounding of invRate
-numberVideoFrames = length(1:invRate:vid.NumFrames); 
+dt = invRate / vidHz;
+numberVideoFrames = length(1:invRate:vid.NumFrames);
 
-% build front store across all frames
-X_front_store    = cell(1, numberVideoFrames); % holds phys coords of fronts
+X_front_store    = cell(1, numberVideoFrames);
 Y_front_store    = cell(1, numberVideoFrames);
 W_front_store    = cell(1, numberVideoFrames);
 rectified_frames = cell(1, numberVideoFrames);
-crest_summary    = cell(1, numberVideoFrames); 
-totalFramesNeeded = numberVideoFrames + 2;
+crest_summary    = cell(1, numberVideoFrames);
+totalFramesNeeded = min(numberVideoFrames + 2, maxFrames);
 
 vid.CurrentTime = 0;
 rawFrames = {};
@@ -184,9 +166,9 @@ frameTimes = [];
 f = 0;
 while hasFrame(vid) && f < totalFramesNeeded
     f = f + 1;
-    frameTimes(f) = vid.CurrentTime;   % actual timestamp of the frame about to be read
+    frameTimes(f) = vid.CurrentTime;
     IMG = rgb2gray(readFrame(vid));
-    rawFrames{f} = double(IMG);
+    rawFrames{f} = double(IMG); %#ok<SAGROW>
 end
 
 actualFrames = numel(rawFrames);
@@ -194,24 +176,20 @@ if actualFrames < 3
     warning('Only %d frames read from %s, skipping.', actualFrames, videoFile);
     continue
 end
-numberVideoFrames = actualFrames - 2;   
+numberVideoFrames = actualFrames - 2;
 
-
-% sub-grid parabola fitting on prob map
-IMG    = zeros([size(xx), 3]);
-Ny_grid = size(xx, 1); % number of AS grid points (rows)
-Nx_grid = size(xx, 2); % number of CS grid points (cols)
+IMG     = zeros([size(xx), 3]);
+Ny_grid = size(xx, 1);
+Nx_grid = size(xx, 2);
 
 for k = 1:numberVideoFrames
     for ii = 1:3
-           frame = rawFrames{k+ii-1};
-           IMG(:,:,ii) = interp2(U, V, double(frame)/255, Uint, Vint, 'linear', nan);
+        IMG(:,:,ii) = interp2(U, V, rawFrames{k+ii-1}, Uint, Vint, 'linear', nan);   % 0-255 scale, no /255
     end
     rectified_frames{k} = IMG(:,:,2);
     [~, prob, ~, ~, ~] = wave_front_from_IMG_UNET(IMG, X, Y, dt, 0);
 
-    % in-situ sensor logging
-    sensors.q22.intensity(end+1) = IMG(sensors.q22.iy, sensors.q22.ix, 2);
+    sensors.q22.intensity(end+1)   = IMG(sensors.q22.iy, sensors.q22.ix, 2);
     sensors.q22.probability(end+1) = prob(sensors.q22.iy, sensors.q22.ix);
     sensors.q22.time(end+1) = seconds(fileStartStamp - hourStartStamp) + frameTimes(k+1);
 
@@ -220,9 +198,8 @@ for k = 1:numberVideoFrames
 
     W_sub = [];
     for ll = 1:length(rclog)
-        W_sub = cat(1, W_sub, rclog{ll}(:,5));  % extract width column (last column)
+        W_sub = cat(1, W_sub, rclog{ll}(:,5));
     end
-
     X_sub = []; Y_sub = [];
     for ll = 1:length(rclog)
         X_sub = cat(1, X_sub, rclog{ll}(:,3));
@@ -230,7 +207,7 @@ for k = 1:numberVideoFrames
     end
     X_front_store{k} = X_sub;
     Y_front_store{k} = Y_sub;
-    W_front_store{k} = W_sub;  % store crest widths for frame k
+    W_front_store{k} = W_sub;
 end
 
 
@@ -643,11 +620,12 @@ if ~exist(sensorSaveDir,'dir')
     mkdir(sensorSaveDir)
 end
 save(fullfile(sensorSaveDir, ['sensor_' sensorFileTag runTag '.mat']), 'sensors') % save IMG props at sensor locs
-save(fullfile(matDataDir, sprintf('%s_%s.mat', dateTag, hourStr, runTag)), '-v7.3'); % save workspace + output vars
+save(fullfile(matDataDir, sprintf('%s_%s%s.mat', dateTag, hourStr, runTag)), '-v7.3'); % save workspace + output vars
 fprintf('Saved workspace for %s to %s\n', hourStr, matDataDir);
 end
 
 % end loop through all files !!!
+end
 
 
 
@@ -701,61 +679,36 @@ fprintf('Min      : %.3f m/s\n', min(all_celerity(:,3)))
 fprintf('Max      : %.3f m/s\n', max(all_celerity(:,3)))
 
 %% animated plot — tracked fronts
-% make sure videoDir matches video date/time if importing .mat file instead of running main flow from scratch
+animFronts = separated_fronts_filtered;   % or separated_fronts for every detected front
 
-% extract date/time from video folder dir
-[~,timeFolder] = fileparts(videoDir);        % gives '1100'
-[~,dateFolder] = fileparts(fileparts(videoDir)); % gives '1002'
-start_month = str2double(dateFolder(1:2));
-start_day   = str2double(dateFolder(3:4));
-start_hour = str2double(timeFolder(1:2));
-start_min  = str2double(timeFolder(3:4));
-start_sec  = 0;
+x_q22 = 133.4638;  y_q22 = 824.3041; % pressure sensor loc for ref
 
-x_q22 = 133.4638; % sensor q22 loc - input
-y_q22 = 824.3041;
+figAnim = figure('Name','Tracked fronts','Renderer','painters');
+axAnim  = axes('Parent', figAnim);
 
-[~,timeFolder] = fileparts(videoDir);  % extract date/time from video directory            
-[~,dateFolder] = fileparts(fileparts(videoDir));   
-start_month = str2double(dateFolder(1:2));
-start_day   = str2double(dateFolder(3:4));
-start_hour = str2double(timeFolder(1:2));
-start_min  = str2double(timeFolder(3:4));
-start_sec  = 0;
+for kk = 1:numberVideoFrames
+    if ~ishandle(figAnim); break; end
+    if isempty(rectified_frames{kk}); continue; end
 
-figure;
-for k = 1:numberVideoFrames
+    cla(axAnim);
+    imagesc(axAnim, X, Y, rectified_frames{kk});
+    set(axAnim, 'YDir', 'normal');          % Y increases upward
+    colormap(axAnim, gray);
+    hold(axAnim, 'on');
+    plot(axAnim, x_q22, y_q22, 'rp', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
 
-    clf
-    hold on
-    if isempty(rectified_frames{k})
-        continue
+    fr = animFronts{kk};
+    for ii = 1:numel(fr)
+        plot(axAnim, fr{ii}.x, fr{ii}.y, 'r.', 'MarkerSize', 8);
     end
-    imagesc(X,Y,rectified_frames{k});
-    colormap(bone)
-    axis tight
+    hold(axAnim, 'off');
 
-    plot(x_q22,y_q22,'p','MarkerSize',10,'MarkerFaceColor','r','MarkerEdgeColor','r') % q22 sensor location
-
-    elapsed_time = (k-1)*dt; % calculate actual timestamp
-    total_seconds = start_hour*3600 + start_min*60 + start_sec + elapsed_time;
-    hour = floor(total_seconds/3600);
-    minute = floor(mod(total_seconds,3600)/60);
-    second = mod(total_seconds,60);
-    title(sprintf('Tracked Fronts - %02d/%02d %02d:%02d:%05.2f',start_month,start_day,hour,minute,second))
-    fronts_k = separated_fronts_filtered{k}; 
-    IDs_k = frontIDs{k};
-    if ~isempty(fronts_k)
-        for i = 1:length(fronts_k)
-            id = IDs_k(i);
-            plot(fronts_k{i}.x,fronts_k{i}.y, '.','Color',globalColors(id,:),'MarkerSize',10)
-        end
-    end
-    drawnow
-    pause(0.1)
+    title(axAnim, sprintf('Tracked fronts - frame %d / %d', kk, numberVideoFrames));
+    % fprintf('frame %d\n', kk);              % progress: should count up in the Command Window
+    pause(0.1);                             % pause alone flushes graphics; no separate drawnow
 end
 
-end
+%%
 % plot cx spatial distribution
 % non_empty = vel_store(~cellfun(@isempty, vel_store));
 % all_vel   = vertcat(non_empty{:});
