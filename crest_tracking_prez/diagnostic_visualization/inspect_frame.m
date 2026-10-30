@@ -1,31 +1,18 @@
 function inspect_frame(k)
-% inspect_frame(k)  -- show rectified image and UNET probability for frame k
-
-% Requires variables in base workspace: rawFrames, Uint, Vint, U, V, X, Y, dt, xx, yy
-% and optionally separated_fronts.
-
-rawFrames = evalin('base', 'rawFrames');
-Uint      = evalin('base', 'Uint');
-Vint      = evalin('base', 'Vint');
-U         = evalin('base', 'U');
-V         = evalin('base', 'V');
-X         = evalin('base', 'X');
-Y         = evalin('base', 'Y');
-dt        = evalin('base', 'dt');
-xx        = evalin('base', 'xx');
-yy        = evalin('base', 'yy');
-
+% inspect_frame(k) -- rectified image and UNET probability for frame k
+% Requires in base workspace: rect_all, X, Y, dt (and optionally separated_fronts)
+rect_all = evalin('base', 'rect_all');
+X        = evalin('base', 'X');
+Y        = evalin('base', 'Y');
+dt       = evalin('base', 'dt');
 if evalin('base', 'exist(''separated_fronts'', ''var'')')
     separated_fronts = evalin('base', 'separated_fronts');
 else
     separated_fronts = {};
 end
 
-% Build 3-frame rectified stack (same as main loop)
-IMG = zeros([size(xx), 3]);
-for ii = 1:3
-    IMG(:,:,ii) = interp2(U, V, rawFrames{k+ii-1}, Uint, Vint, 'linear', nan);
-end
+% same 3-frame stack as the main loop
+IMG = cat(3, rect_all{k}, rect_all{k+1}, rect_all{k+2});
 rectified = IMG(:,:,2);
 
 % recompute UNET probability for this stack

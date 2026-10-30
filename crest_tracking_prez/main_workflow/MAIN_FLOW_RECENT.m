@@ -11,23 +11,32 @@ addpath(genpath(fullfile(thisDir,'..')), '-begin');
 matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/mat_data/local_runs/';
 if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
-year = 2021; % INPUT
+% INPUT
+year = 2021;
+tower = 'north'; % 2021: 'north' or 'south'
+runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs)
+maxFrames = 250;        % used for test runs; set to 'Inf' for full videos
 
-runTag    = '';    % set to '' for real runs (prevents overwriting saved outputs)
-maxFrames = Inf;        % used for test runs; set to 'Inf' for full videos
+enhance_image = true;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
+if enhance_image; runTag = [runTag '_enh']; end    % enhanced runs get their own file names
 
 switch year
     case 2013 
         IDs      = {'rod13'};
-        dateTag  = '20131024';        % folder prefix, yyyymmdd
-        hourList = 1200;              % -> 20131024_12
+        dateTag  = '20131022';        % folder prefix, yyyymmdd
+        hourList = 1600;              % -> 20131024_12
         numFiles = 1;                 % each vid is 5 mins, so set to 12 for full hour run
         startIdx = 1;
 
     case 2021 % dunex
-        IDs      = {'top21','bot21'};
-        dateTag  = '20210829_1300';    % prefix, yyyymmdd_hhmm
-        hourList = 0; numFiles = 1; startIdx = 1;  
+        switch lower(tower)
+            case 'north'; IDs = {'top21'};
+            case 'south'; IDs = {'bot21'};
+            case 'both';  IDs = {'top21','bot21'};
+            otherwise;    error('tower must be ''north'', ''south'', or ''both'' (got ''%s'').', tower);
+        end
+        dateTag  = '20210904_1600';    % prefix, yyyymmdd_hhmm
+        hourList = 0; numFiles = 1; startIdx = 1;      
 end
 
 for year_ID = 1:length(IDs)
@@ -166,31 +175,36 @@ crest_summary    = cell(1, numberVideoFrames);
 totalFramesNeeded = min(numberVideoFrames + 2, maxFrames);
 
 vid.CurrentTime = 0;
-rawFrames = {};
+rect_all   = {};                      % every frame, already rectified (small grid); replaces rawFrames
 frameTimes = [];
-f = 0;
-while hasFrame(vid) && f < totalFramesNeeded
-    f = f + 1;
-    frameTimes(f) = vid.CurrentTime;
-    IMG = rgb2gray(readFrame(vid));
-    rawFrames{f} = double(IMG); 
-end
-
-actualFrames = numel(rawFrames);
-if actualFrames < 3
-    warning('Only %d frames read from %s, skipping.', actualFrames, videoFile);
-    continue
-end
-numberVideoFrames = actualFrames - 2;
-
 IMG     = zeros([size(xx), 3]);
 Ny_grid = size(xx, 1);
 Nx_grid = size(xx, 2);
+f = 0;
 
-for k = 1:numberVideoFrames
-    for ii = 1:3
-        IMG(:,:,ii) = interp2(U, V, rawFrames{k+ii-1}, Uint, Vint, 'linear', nan);   
+while hasFrame(vid) && f < totalFramesNeeded
+    f = f + 1;
+    frameTimes(f) = vid.CurrentTime;
+    raw  = double(rgb2gray(readFrame(vid)));                        % full-res frame, temporary
+    rect = interp2(U, V, raw, Uint, Vint, 'linear', nan);           % rectified frame
+    
+    if enhance_image
+        if f == 1    % threshold from the first frame, held fixed for the whole video
+            foam_th = water_foam_threshold(rect(~isnan(rect)), 0);  % NaNs (outside footprint) excluded; 0 = no plot
+            fprintf('  foam/water threshold: %.1f\n', foam_th);
+        end
+        rect = 255./(1+exp(-3*pi/2*(rect-foam_th)/(255-foam_th)));  % sigmoid stretch; NaNs stay NaN
     end
+
+    rect_all{f} = rect;
+
+    if f < 3; continue; end                                         % need 3 frames before the first stack
+
+    k = f - 2;                                                      % same k as before: stack = frames k, k+1, k+2
+    IMG(:,:,1) = rect_all{k};
+    IMG(:,:,2) = rect_all{k+1};
+    IMG(:,:,3) = rect_all{k+2};
+
     rectified_frames{k} = IMG(:,:,2);
     [~, prob, ~, ~, ~] = wave_front_from_IMG_UNET(IMG, X, Y, dt, 0);
 
@@ -214,6 +228,13 @@ for k = 1:numberVideoFrames
     Y_front_store{k} = Y_sub;
     W_front_store{k} = W_sub;
 end
+
+actualFrames = f;
+if actualFrames < 3
+    warning('Only %d frames read from %s, skipping.', actualFrames, videoFile);
+    continue
+end
+numberVideoFrames = actualFrames - 2;
 
 
 % separate fronts via DBSCAN
@@ -701,7 +722,7 @@ fprintf('Max      : %.3f m/s\n', max(all_celerity(:,3)))
 %% animated plot — tracked fronts
 animFronts = separated_fronts_filtered;   % or separated_fronts for every detected front
 
-x_q22 = 133.4638;  y_q22 = 824.3041; % pressure sensor loc for ref
+% x_q22 = 133.4638;  y_q22 = 824.3041; % pressure sensor loc for ref
 
 figAnim = figure('Name','Tracked fronts','Renderer','painters');
 axAnim  = axes('Parent', figAnim);
@@ -715,7 +736,7 @@ for kk = 1:numberVideoFrames
     set(axAnim, 'YDir', 'normal');          % Y increases upward
     colormap(axAnim, gray);
     hold(axAnim, 'on');
-    plot(axAnim, x_q22, y_q22, 'rp', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
+    % plot(axAnim, x_q22, y_q22, 'rp', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
 
     fr = animFronts{kk};
     for ii = 1:numel(fr)
