@@ -2,31 +2,32 @@
 % main flow
 
 thisDir = fileparts(mfilename('fullpath'));
-addpath(genpath('/Users/prezleystrait/git/waveIMG/mfiles'));        % makeRadialDistortion, etc.
-addpath(genpath(fullfile(thisDir,'..')), '-begin');                 % crest_tracking_prez takes priority
+addpath(genpath('/Users/prezleystrait/git/waveIMG/mfiles'));        % functions
+addpath(genpath(fullfile(thisDir,'..')), '-begin');                 
 
-matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/mat_data/';
+% matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_Eddies/mat_data/';
+% if ~exist(matDataDir,'dir'); mkdir(matDataDir); end            for shared onedrive save...
+
+matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/mat_data/local_runs/';
 if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
-runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs)
-maxFrames = 102;        % TEST: cap frames read per video; set to Inf for full videos
+year = 2021; % INPUT
 
-year = 2013;
+runTag    = '';    % set to '' for real runs (prevents overwriting saved outputs)
+maxFrames = Inf;        % used for test runs; set to 'Inf' for full videos
 
 switch year
-    case 2013
+    case 2013 
         IDs      = {'rod13'};
         dateTag  = '20131024';        % folder prefix, yyyymmdd
         hourList = 1200;              % -> 20131024_12
-        numFiles = 1;                 % TEST: set to 12 for a full hour
+        numFiles = 1;                 % each vid is 5 mins, so set to 12 for full hour run
         startIdx = 1;
 
-    case 2021
+    case 2021 % dunex
         IDs      = {'top21','bot21'};
-        dateTag  = '20210904_0800_matlab';
-        hourList = 0;
-        numFiles = 1;
-        startIdx = 1;
+        dateTag  = '20210829_1300';    % prefix, yyyymmdd_hhmm
+        hourList = 0; numFiles = 1; startIdx = 1;  
 end
 
 for year_ID = 1:length(IDs)
@@ -71,26 +72,28 @@ for hourVal = hourList
     [~, firstBaseName] = fileparts(firstVideoFile);
     firstTokens = regexp(firstBaseName, '(\d{8})_(\d{6})', 'tokens');   % no ^ anchor, works for 2021 names too
 
+    firstTokens = regexp(firstBaseName, '(\d{8})_(\d{4,6})', 'tokens');   % time can be hhmm or hhmmss
+
     if ~isempty(firstTokens) && ~isempty(firstTokens{1})
         firstDateToken = firstTokens{1}{1};
         firstTimeToken = firstTokens{1}{2};
-        hourStartStamp = datetime(firstDateToken, 'InputFormat', 'yyyyMMdd') + hours(str2double(firstTimeToken(1:2))) + ...
-            minutes(str2double(firstTimeToken(3:4))) + seconds(str2double(firstTimeToken(5:6)));
+        if numel(firstTimeToken) == 4; firstTimeToken = [firstTimeToken '00']; end   % hhmm -> hhmmss
+            hourStartStamp = datetime(firstDateToken, 'InputFormat', 'yyyyMMdd') + hours(str2double(firstTimeToken(1:2))) + ...
+                minutes(str2double(firstTimeToken(3:4))) + seconds(str2double(firstTimeToken(5:6)));
     else
         hourStartStamp = datetime('now');
     end
 
-    all_crest_widths = {};
+    all_crest_widths = {}; % preallocate storage
     all_crest_width_pts_total  = [];
     all_crest_width_time_total = [];
     all_celerity_total = [];
     all_celerity_time_total = [];
     all_crest_summary = {};
 
-    sensors.q22.intensity = [];
+    sensors.q22.intensity = []; % sensor storage, not rlly used
     sensors.q22.probability = [];
     sensors.q22.time = [];
-
     sensors.videoTimes = {};
     sensors.videoSeconds = [];
     sensors.videoOffsets = [];
@@ -103,7 +106,7 @@ for hourVal = hourList
     [Uint, Vint] = getUVfromXYZ(xx, yy, z_tide, icp, beta0);
     Pnon     = 0.15;
 
-% in-situ sensors
+% in-situ sensors, not rlly used...
 sensors.q22.x = 133.4638;
 sensors.q22.y = 824.3041;
 [~, sensors.q22.ix] = min(abs(X - sensors.q22.x));
@@ -115,11 +118,12 @@ videoFile = selectedFiles(fnum).name;
 videoPath = fullfile(videoDir, videoFile);
 
 [~, baseName] = fileparts(videoFile);
-tokens = regexp(baseName, '(\d{8})_(\d{6})', 'tokens');
+tokens = regexp(baseName, '(\d{8})_(\d{4,6})', 'tokens');
 
 if ~isempty(tokens)
     dateToken = tokens{1}{1};
     timeToken = tokens{1}{2};
+    if numel(timeToken) == 4; timeToken = [timeToken '00']; end   % hhmm -> hhmmss
 
     fh = str2double(timeToken(1:2));     % renamed so they don't shadow hour/minute/second
     fm = str2double(timeToken(3:4));
@@ -148,6 +152,7 @@ catch
     continue
 end
 
+% vid processing setup
 vidHz = vid.FrameRate;
 invRate = 1;
 dt = invRate / vidHz;
@@ -168,7 +173,7 @@ while hasFrame(vid) && f < totalFramesNeeded
     f = f + 1;
     frameTimes(f) = vid.CurrentTime;
     IMG = rgb2gray(readFrame(vid));
-    rawFrames{f} = double(IMG); %#ok<SAGROW>
+    rawFrames{f} = double(IMG); 
 end
 
 actualFrames = numel(rawFrames);
@@ -184,7 +189,7 @@ Nx_grid = size(xx, 2);
 
 for k = 1:numberVideoFrames
     for ii = 1:3
-        IMG(:,:,ii) = interp2(U, V, rawFrames{k+ii-1}, Uint, Vint, 'linear', nan);   % 0-255 scale, no /255
+        IMG(:,:,ii) = interp2(U, V, rawFrames{k+ii-1}, Uint, Vint, 'linear', nan);   
     end
     rectified_frames{k} = IMG(:,:,2);
     [~, prob, ~, ~, ~] = wave_front_from_IMG_UNET(IMG, X, Y, dt, 0);
@@ -223,6 +228,13 @@ for k = 1:numberVideoFrames
     W_temp = W_front_store{k};   % crest widths for this frame
 
     pts     = [X_temp(:), Y_temp(:)];
+    if isempty(pts)
+        separated_fronts{k} = {};
+        crest_widths{k}     = [];
+        crest_width_pts{k}  = [];
+        continue
+    end
+
     epsilon = 5 * info.Y_res; % neighborhood search radius (m) %    prev 4
     minPts  = 3; % min pts to be cons a core point of a cluster     prev 4
 
@@ -612,20 +624,28 @@ end
 end
 
 all_celerity = all_celerity_total; % final output
-fprintf('\n=== DONE: %d total files processed, %d total celerity points ===\n', numFiles, size(all_celerity,1));
+fprintf('\n=== DONE: %d total files processed, %d total celerity points ===\n', numel(selectedFiles), size(all_celerity,1));
 
-sensorFileTag = sprintf('%s_%s', dateTag, hourStr);
-sensorSaveDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main/mat_data/sensor_timeseries';
-if ~exist(sensorSaveDir,'dir')
-    mkdir(sensorSaveDir)
-end
-save(fullfile(sensorSaveDir, ['sensor_' sensorFileTag runTag '.mat']), 'sensors') % save IMG props at sensor locs
-save(fullfile(matDataDir, sprintf('%s_%s%s.mat', dateTag, hourStr, runTag)), '-v7.3'); % save workspace + output vars
-fprintf('Saved workspace for %s to %s\n', hourStr, matDataDir);
+% label each run by tower
+switch ID
+    case 'top21';  towerTag = 'NorthTower';
+    case 'bot21';  towerTag = 'SouthTower';
+    otherwise;     towerTag = ID;
 end
 
-% end loop through all files !!!
-end
+sensorFileTag = sprintf('%s_%s_%s', towerTag, dateTag, hourStr);
+sensorSaveDir = fullfile(matDataDir, 'sensor_timeseries');
+if ~exist(sensorSaveDir,'dir'); mkdir(sensorSaveDir); end
+
+save(fullfile(sensorSaveDir, ['sensor_' sensorFileTag runTag '.mat']), 'sensors')   % IMG props at sensor locs
+
+% save the whole workspace except rawFrames (everything else is kept, incl. rectified_frames)
+matOut = fullfile(matDataDir, sprintf('%s_%s_%s%s.mat', towerTag, dateTag, hourStr, runTag));
+save(matOut, '-regexp', '^(?!rawFrames$).', '-v7.3');
+fprintf('Saved %s workspace (no rawFrames) to %s\n', towerTag, matOut);
+
+end   % end hourVal loop
+end   % end year_ID loop ... video processing done
 
 
 
@@ -641,19 +661,19 @@ box on; grid minor;
 xlim([85 190]); ylim([605 1000]);
 
 % bathy from celerity using linear theory
-% g = 9.81;
-% depth = all_celerity(:,5).^2 ./ g;
-% figure; hold on;
-% colormap(parula)
-% scatter(all_celerity(:,1), all_celerity(:,2), 2, depth, 'filled');
-% cb = colorbar;
-% cb.Label.String = 'Depth [m]';
-% clim([0 3]);  % depth range
-% title('Estimated Bathy from Celerity - 10/02')
-% xlabel('Cross-Shore [m]')
-% ylabel('Alongshore [m]')
-% box on; grid minor
-% axis equal tight;
+g = 9.81;
+depth = all_celerity(:,5).^2 ./ g;
+figure; hold on;
+colormap(parula)
+scatter(all_celerity(:,1), all_celerity(:,2), 2, depth, 'filled');
+cb = colorbar;
+cb.Label.String = 'Depth [m]';
+clim([0 3]);  % depth range
+title('Estimated Bathy from Celerity - 10/02')
+xlabel('Cross-Shore [m]')
+ylabel('Alongshore [m]')
+box on; grid minor
+axis equal tight;
 
 % celerity histogram
 figure;
@@ -726,7 +746,6 @@ end
 % edges = 0:0.2:7;
 % figure;
 % h_hist = histogram(all_vel(:,3), edges, 'FaceColor', 'b', 'EdgeColor', 'none', 'Normalization','probability');
-% 
 % hold on
 % m_mean = mean(all_vel(:,3)); 
 % m_median = median(all_vel(:,3));
@@ -734,7 +753,6 @@ end
 % h_median = xline(m_median, 'y--', 'LineWidth', 2);
 % legend([h_hist, h_mean, h_median], {'Velocity distribution', sprintf('Mean = %.2f m/s', m_mean), ...
 %      sprintf('Median = %.2f m/s', m_median)}, 'Location', 'best')
-% 
 % xlabel('Onshore Celerity [m/s]'); ylabel('Frequency')
 % title('Distribution of Onshore Celerity (c_x) - all frames')
 % xlim([u_min u_max])

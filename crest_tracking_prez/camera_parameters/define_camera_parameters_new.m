@@ -34,10 +34,14 @@ switch ID
     case 'top21'
         info.vid_dir       = 'DunexMP4';
         info.vid_name_root = 'Dunex_NorthTower';
+        info.X_min = 75;     info.X_max = 250;
+        info.Y_min = 500;    info.Y_max = 750;
 
     case 'bot21'
         info.vid_dir       = 'DunexMP4';
         info.vid_name_root = 'Dunex_SouthTower';   % TODO: confirm against your files
+        info.X_min = 75;     info.X_max = 250;
+        info.Y_min = 500;    info.Y_max = 750;
 
     case {'top18','bot18'}
         info.vid_dir       = 'RSEX18MP4';
