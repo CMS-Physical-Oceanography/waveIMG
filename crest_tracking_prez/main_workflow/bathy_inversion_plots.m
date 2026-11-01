@@ -2,28 +2,58 @@
 % BATHY INVERSION  Loads video-derived celerity + survey bathy for 1 hour, inverts celerity to depth, & comparison plots.
 
 %% USER INPUT
-dateTag  = '1002';    % MMDD
-hourStr  = '1200';    % HHMM
-year_str = '2013';    % survey/tide file year
+year_str   = '2021';
+runDate    = '20210904';        % yyyymmdd of the video run
+hourStr    = '1600';            % hhmm
+camera     = 'NorthTower';      % 2021: 'NorthTower' | 'SouthTower' 
+                                % 2013: 'rod13'  (prefix of the saved .mat)
+
+surveyDate = '20210911';        % yyyymmdd of survey to use; '' = same day as runDate
 
 bin_size = 5;    % m
 min_pts  = 5;    % min survey pts per bin
 g        = 9.81;
 
-dateLabel = sprintf('%s/%s', dateTag(1:2), dateTag(3:4));
+yr = str2double(runDate(1:4));  mo = str2double(runDate(5:6));
+dy = str2double(runDate(7:8));  hr = str2double(hourStr(1:2));
+dateLabel     = sprintf('%02d/%02d/%d', mo, dy, yr);
 dateTimeLabel = sprintf('%s, %s', dateLabel, hourStr);
 
-baseDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/waveIMG-main/waveIMG-main';
-videoOutputFile = fullfile(baseDir, 'mat_data', sprintf('%s_%s.mat', dateTag, hourStr));
+%% paths
+dataRoot  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_Eddies';
+matDir    = fullfile(dataRoot, 'mat_data');
+surveyDir = fullfile(dataRoot, 'data', 'bathy_surveys');
+tideFile  = fullfile(dataRoot, 'data', 'tide_duck', sprintf('duck_waterLvls%s.csv', year_str));
 
-% no bathy survey exists for 10/01 -- fall back to 10/02
-surveyDateTag = dateTag;
-if strcmp(dateTag, '1001'); surveyDateTag = '1002'; end
-surveyFile = fullfile(baseDir, 'data', 'bathy_surveys', sprintf('RODDebbieTimeLagFix_%s%s.xyz', year_str, surveyDateTag));
-tideFile = fullfile(baseDir, 'data', 'tide_duck', 'duck_waterLvls2013.csv');
+% video output: match on camera + date_hour only, ignore anything after (_0000, _enh, _test, ...)
+runKey = [runDate '_' hourStr];
+L = dir(fullfile(matDir, [camera '_' runKey '*.mat']));
+if isempty(L)
+    error('No mat file matching %s_%s*.mat in %s', camera, runKey, matDir);
+end
+if numel(L) > 1
+    [~, iNew] = max([L.datenum]);
+    warning('%d files match; using the newest: %s', numel(L), L(iNew).name);
+    L = L(iNew);
+end
+videoOutputFile = fullfile(L.folder, L.name);
+fprintf('Loading %s\n', L.name);
 
-%% load celerity
-S = load(videoOutputFile);
+% survey file: naming differs by year
+if isempty(surveyDate); surveyDate = runDate; end
+switch year_str
+    case '2013'; surveyPattern = sprintf('RODDebbieTimeLagFix_%s.xyz', surveyDate);
+    case '2021'; surveyPattern = sprintf('FRF_%s_*.csv', surveyDate);
+    otherwise;   error('Add a survey filename pattern for year %s', year_str);
+end
+SL = dir(fullfile(surveyDir, surveyPattern));
+if isempty(SL); error('No survey file matching %s in %s', surveyPattern, surveyDir); end
+if numel(SL) > 1; warning('%d survey files match; using %s', numel(SL), SL(1).name); end
+surveyFile  = fullfile(SL(1).folder, SL(1).name);
+surveyLabel = sprintf('%s/%s', surveyDate(5:6), surveyDate(7:8));
+
+%% load celerity (only this variable; the mat is -v7.3 so the rest isn't read)
+S = load(videoOutputFile, 'all_celerity_total');
 all_celerity = S.all_celerity_total;
 
 %% auto tide lookup
@@ -33,12 +63,11 @@ tideTimeOfDay = duration(Ttide.Time_LST_LDT_, 'InputFormat', 'hh:mm');
 tideTime = tideDate + tideTimeOfDay;
 waterLevel = Ttide.Verified_m_;
 
-yr = str2double(year_str); mo = str2double(dateTag(1:2)); dy = str2double(dateTag(3:4)); hr = str2double(hourStr(1:2));
 windowStart = datetime(yr, mo, dy, hr, 0, 0);
 windowEnd   = windowStart + hours(1);
 inWindow = tideTime >= windowStart & tideTime < windowEnd;
 if ~any(inWindow)
-    error('No tide data found for %s %s.', dateTag, hourStr);
+    error('No tide data found for %s %s.', runDate, hourStr);
 end
 tide = mean(waterLevel(inWindow), 'omitnan');
 
@@ -78,9 +107,20 @@ title(sprintf('c-derived Bathy - %s', dateTimeLabel), 'FontSize',15)
 grid minor; box on
 xlim([90 170]); ylim([602 1000])
 
-%% survey bathy - bin averaged
-data = readmatrix(surveyFile,'FileType','text');
-x = data(:,1); y = data(:,2); z = data(:,3);
+%% survey format is chosen from the file name
+[~, surveyName] = fileparts(surveyFile);
+data = readmatrix(surveyFile, 'FileType', 'text', 'NumHeaderLines', 0);
+
+if startsWith(surveyName, 'RODDebbie')          % 2013: x y z columns
+    x = data(:,1);  y = data(:,2);  z = data(:,3);
+elseif startsWith(surveyName, 'FRF_')           % 2021 FRF/LARC csv
+    x = data(:,8);  y = data(:,9);  z = data(:,10);   % FRF X, FRF Y, NAVD88 elevation
+else
+    error('Unknown survey format: %s. Add a case here.', surveyName);
+end
+
+ok = ~isnan(x) & ~isnan(y) & ~isnan(z);
+x = x(ok);  y = y(ok);  z = z(ok);
 
 xi_survey = discretize(x, x_edges);
 yi_survey = discretize(y, y_edges);
@@ -110,7 +150,7 @@ axis tight
 colormap(flipud(parula))
 cb = colorbar; cb.Label.String = 'Depth [m, NAVD88]';
 xlabel('Cross-shore [m]'); ylabel('Alongshore [m]')
-title(sprintf('RODDebbie Survey Bathy %s - 5x5m bins', dateLabel))
+title(sprintf('Survey Bathy %s - 5x5m bins', surveyLabel));
 grid minor; box on
 xlim([90 170]); ylim([602 1000]); clim([0 3])
 hold on

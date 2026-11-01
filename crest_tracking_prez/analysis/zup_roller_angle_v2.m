@@ -297,7 +297,7 @@ end
 if ~isempty(allGam)
     figure
     scatter(allGam, allAng, 18, allX, 'filled', 'MarkerFaceAlpha', 0.6);
-    colormap(gca, parula)
+    colormap(gca, flipud(winter))
     cb = colorbar; cb.Label.String = 'Sensor cross-shore position [m]';
     xlabel('Breaker index \gamma = H/h [-]'); ylabel('Roller angle \theta [deg]')
     title(sprintf('Roller Angle vs Breaker Index - %s, %d waves', dateTimeLabel, numel(allGam)))

@@ -13,9 +13,9 @@ if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
 % INPUT
 year = 2021;
-tower = 'north'; % 2021: 'north' or 'south'
-runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs)
-maxFrames = 250;        % used for test runs; set to 'Inf' for full videos
+tower = 'south'; % 2021: 'north' or 'south'
+runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs), or '_test'
+maxFrames = 100;        % used for test runs; set to 'Inf' for full videos
 
 enhance_image = true;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
 if enhance_image; runTag = [runTag '_enh']; end    % enhanced runs get their own file names
@@ -174,10 +174,12 @@ rectified_frames = cell(1, numberVideoFrames);
 crest_summary    = cell(1, numberVideoFrames);
 totalFramesNeeded = min(numberVideoFrames + 2, maxFrames);
 
+tRun = tic; % new for timing % %% %% % % % %
+
 vid.CurrentTime = 0;
-rect_all   = {};                      % every frame, already rectified (small grid); replaces rawFrames
 frameTimes = [];
-IMG     = zeros([size(xx), 3]);
+IMG = zeros([size(xx), 3]);
+win = cell(1,3);                      % rolling window of 3 rectified frames (replaces rect_all)
 Ny_grid = size(xx, 1);
 Nx_grid = size(xx, 2);
 f = 0;
@@ -187,25 +189,24 @@ while hasFrame(vid) && f < totalFramesNeeded
     frameTimes(f) = vid.CurrentTime;
     raw  = double(rgb2gray(readFrame(vid)));                        % full-res frame, temporary
     rect = interp2(U, V, raw, Uint, Vint, 'linear', nan);           % rectified frame
-    
+
     if enhance_image
         if f == 1    % threshold from the first frame, held fixed for the whole video
-            foam_th = water_foam_threshold(rect(~isnan(rect)), 0);  % NaNs (outside footprint) excluded; 0 = no plot
+            foam_th = water_foam_threshold(rect(~isnan(rect)), 0);
             fprintf('  foam/water threshold: %.1f\n', foam_th);
         end
-        rect = 255./(1+exp(-3*pi/2*(rect-foam_th)/(255-foam_th)));  % sigmoid stretch; NaNs stay NaN
+        rect = 255./(1+exp(-3*pi/2*(rect-foam_th)/(255-foam_th)));
     end
 
-    rect_all{f} = rect;
-
+    win = [win(2:3), {rect}];                                       % drop oldest, add newest
     if f < 3; continue; end                                         % need 3 frames before the first stack
 
     k = f - 2;                                                      % same k as before: stack = frames k, k+1, k+2
-    IMG(:,:,1) = rect_all{k};
-    IMG(:,:,2) = rect_all{k+1};
-    IMG(:,:,3) = rect_all{k+2};
+    IMG(:,:,1) = win{1};
+    IMG(:,:,2) = win{2};
+    IMG(:,:,3) = win{3};
 
-    rectified_frames{k} = IMG(:,:,2);
+    rectified_frames{k} = uint8(IMG(:,:,2));                        % compact copy for the animation
     [~, prob, ~, ~, ~] = wave_front_from_IMG_UNET(IMG, X, Y, dt, 0);
 
     sensors.q22.intensity(end+1)   = IMG(sensors.q22.iy, sensors.q22.ix, 2);
@@ -654,15 +655,25 @@ switch ID
     otherwise;     towerTag = ID;
 end
 
-sensorFileTag = sprintf('%s_%s_%s', towerTag, dateTag, hourStr);
-sensorSaveDir = fullfile(matDataDir, 'sensor_timeseries');
-if ~exist(sensorSaveDir,'dir'); mkdir(sensorSaveDir); end
-
-save(fullfile(sensorSaveDir, ['sensor_' sensorFileTag runTag '.mat']), 'sensors')   % IMG props at sensor locs
+% sensorFileTag = sprintf('%s_%s_%s', towerTag, dateTag, hourStr);        % sensor output saving...
+% sensorSaveDir = fullfile(matDataDir, 'sensor_timeseries');
+% if ~exist(sensorSaveDir,'dir'); mkdir(sensorSaveDir); end
+% save(fullfile(sensorSaveDir, ['sensor_' sensorFileTag runTag '.mat']), 'sensors')   % IMG props at sensor locs
 
 % save the whole workspace except rawFrames (everything else is kept, incl. rectified_frames)
 matOut = fullfile(matDataDir, sprintf('%s_%s_%s%s.mat', towerTag, dateTag, hourStr, runTag));
-save(matOut, '-regexp', '^(?!rawFrames$).', '-v7.3');
+
+nFull = floor(vid.Duration*vid.FrameRate) - 2;     % frames in the full video               % % % %        new for tic toc....
+fprintf('Processed %d frames in %.1f min -> est. full video (%d frames): %.1f min\n', ...
+    numberVideoFrames, toc(tRun)/60, nFull, toc(tRun)/60 * nFull/numberVideoFrames); % % % %% % % 
+
+save(matOut, '-regexp', '^(?!(raw|rect|win|IMG|prob|vid)$).', '-v7.3');
+
+d = dir(matOut); % % % % %% % %
+fprintf('File: %.0f MB for %d frames -> est. full video: %.0f MB (upper bound)\n', ...
+    d.bytes/1e6, numberVideoFrames, d.bytes/1e6 * nFull/numberVideoFrames); % % % % % %
+
+
 fprintf('Saved %s workspace (no rawFrames) to %s\n', towerTag, matOut);
 
 end   % end hourVal loop

@@ -1,21 +1,32 @@
+
 function inspect_frame(k)
 % inspect_frame(k) -- rectified image and UNET probability for frame k
-% Requires in base workspace: rect_all, X, Y, dt (and optionally separated_fronts)
-rect_all = evalin('base', 'rect_all');
-X        = evalin('base', 'X');
-Y        = evalin('base', 'Y');
-dt       = evalin('base', 'dt');
+% Re-reads frames k..k+2 from the video (nothing large is kept in memory).
+% Requires in base workspace: videoPath, frameTimes, U, V, Uint, Vint, X, Y, dt,
+% enhance_image (and foam_th if enhanced); optionally separated_fronts.
+B = @(n) evalin('base', n);
+U = B('U'); V = B('V'); Uint = B('Uint'); Vint = B('Vint');
+X = B('X'); Y = B('Y'); dt = B('dt'); frameTimes = B('frameTimes');
+enh = B('enhance_image');
+if enh; foam_th = B('foam_th'); end
 if evalin('base', 'exist(''separated_fronts'', ''var'')')
-    separated_fronts = evalin('base', 'separated_fronts');
+    separated_fronts = B('separated_fronts');
 else
     separated_fronts = {};
 end
 
-% same 3-frame stack as the main loop
-IMG = cat(3, rect_all{k}, rect_all{k+1}, rect_all{k+2});
+vid = VideoReader(B('videoPath'));
+vid.CurrentTime = frameTimes(k);          % jump to frame k
+IMG = zeros([size(Uint), 3]);
+for ii = 1:3
+    r = interp2(U, V, double(rgb2gray(readFrame(vid))), Uint, Vint, 'linear', nan);
+    if enh
+        r = 255./(1+exp(-3*pi/2*(r-foam_th)/(255-foam_th)));
+    end
+    IMG(:,:,ii) = r;
+end
 rectified = IMG(:,:,2);
 
-% recompute UNET probability for this stack
 [~, prob, ~, ~, ~] = wave_front_from_IMG_UNET(IMG, X, Y, dt, 0);
 
 % Plot side-by-side

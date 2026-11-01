@@ -78,8 +78,7 @@ colorbar
 % filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
 %     'waveIMG-main/waveIMG-main/data/surveys for prezley/FRF_20210907_1213_DUNEX_NAVD88_LARC_GPS_UTC_v20210911.csv'];
 
-filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/'...
-    'waveIMG-main/waveIMG-main/data/bathy_surveys/FRF_20180919_1154_FRF_NAVD88_LARC_GPS_UTC_v20180920.csv']
+filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_Eddies/data/bathy_surveys/FRF_20210905_1212_DUNEX_NAVD88_LARC_GPS_UTC_v20210914.csv']
 data = readmatrix(filename,'FileType','text');
 
 % FRF_20210901_1211_DUNEX_NAVD88_LARC_GPS_UTC_v20210905.csv
@@ -129,7 +128,7 @@ ylabel('Alongshore [m]')
 title('Interpolated Survey Bathy')
 
 xlim([90 200])
-ylim([602 1000])
+ylim([602 1100])
 
 
 %% backpack eps survey 2022
