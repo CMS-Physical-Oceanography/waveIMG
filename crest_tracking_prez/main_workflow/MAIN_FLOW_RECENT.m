@@ -12,10 +12,10 @@ matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/
 if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
 % INPUT
-year = 2021;
-tower = 'south'; % 2021: 'north' or 'south'
+year = 2013;
+tower = 'north'; % 2021: 'north' or 'south'
 runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs), or '_test'
-maxFrames = 100;        % used for test runs; set to 'Inf' for full videos
+maxFrames = 250;        % used for test runs; set to 'Inf' for full videos
 
 enhance_image = true;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
 if enhance_image; runTag = [runTag '_enh']; end    % enhanced runs get their own file names
@@ -23,7 +23,7 @@ if enhance_image; runTag = [runTag '_enh']; end    % enhanced runs get their own
 switch year
     case 2013 
         IDs      = {'rod13'};
-        dateTag  = '20131022';        % folder prefix, yyyymmdd
+        dateTag  = '20131023';        % folder prefix, yyyymmdd
         hourList = 1600;              % -> 20131024_12
         numFiles = 1;                 % each vid is 5 mins, so set to 12 for full hour run
         startIdx = 1;
@@ -35,7 +35,7 @@ switch year
             case 'both';  IDs = {'top21','bot21'};
             otherwise;    error('tower must be ''north'', ''south'', or ''both'' (got ''%s'').', tower);
         end
-        dateTag  = '20210904_1600';    % prefix, yyyymmdd_hhmm
+        dateTag  = '20210908_0800';    % prefix, yyyymmdd_hhmm
         hourList = 0; numFiles = 1; startIdx = 1;      
 end
 

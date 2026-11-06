@@ -8,10 +8,10 @@ hourStr    = '1600';            % hhmm
 camera     = 'NorthTower';      % 2021: 'NorthTower' | 'SouthTower' 
                                 % 2013: 'rod13'  (prefix of the saved .mat)
 
-surveyDate = '20210911';        % yyyymmdd of survey to use; '' = same day as runDate
+surveyDate = '20210905';        % yyyymmdd of bathy survey to use; '' = same day as runDate
 
 bin_size = 5;    % m
-min_pts  = 5;    % min survey pts per bin
+min_pts  = 3;    % min survey pts per bin                % changed from 5 (original) to 3 !!!!!!
 g        = 9.81;
 
 yr = str2double(runDate(1:4));  mo = str2double(runDate(5:6));
@@ -105,7 +105,7 @@ xlabel('Cross-shore [m]');
 ylabel('Alongshore [m]')
 title(sprintf('c-derived Bathy - %s', dateTimeLabel), 'FontSize',15)
 grid minor; box on
-xlim([90 170]); ylim([602 1000])
+% xlim([90 170]); ylim([602 1000])
 
 %% survey format is chosen from the file name
 [~, surveyName] = fileparts(surveyFile);

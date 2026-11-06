@@ -1,58 +1,134 @@
 
 %  PIV correction pipeline: video-derived celerity, apply PIV, bathy comparison, error plots
 
-%% USER INPUT -- for data paths               change surveyFile manually if analyzing 10/01 b/c no bathy survey
-dateTag  = '1002';    % MMDD
-hourStr  = '1300';    % HHMM
-year_str = '2013';    % survey file year prefix
+%% USER INPUT
+year_str   = '2021';
+runDate    = '20210904';        % yyyymmdd of the video run
+hourStr    = '1600';            % hhmm
+camera     = 'NorthTower';      % 2021: 'NorthTower' | 'SouthTower'
+                                % 2013: 'rod13'  (prefix of the saved .mat)
+surveyDate = '20210905';        % yyyymmdd of bathy survey to use; '' = same day as runDate
 
 bin_size = 5;          % m
 piv_bin  = minutes(2);
-min_pts  = 5;          % min survey pts per bin
+min_pts  = 3;          % min survey pts per bin
 g        = 9.81;
 
-% derived display labels -- used in all titles/sgtitles below
-dateLabel = sprintf('%s/%s', dateTag(1:2), dateTag(3:4));   % e.g. '10/02'
-hourLabel = hourStr;                                          % e.g. '1400'
-dateTimeLabel = sprintf('%s, %s', dateLabel, hourLabel);       % e.g. '10/02, 1400'
+% PIV orientation: flips raw PIV u to match FRF x (onshore = positive)
+switch year_str
+    case '2013'; piv_u_sign = -1;
+    case '2021'; piv_u_sign = -1;
+    otherwise;   error('Set piv_u_sign for year %s', year_str);
+end
 
-% derived file paths
-baseDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main';
-videoOutputFile = fullfile(baseDir, 'mat_data', sprintf('%s_%s.mat', dateTag, hourStr));
-pivFile         = fullfile(baseDir, 'data', 'PIV_2min', 'PVLAB_PIV_SurfaceFlows.mat');
-surveyDateTag = dateTag;
-if strcmp(dateTag, '1001'); surveyDateTag = '1002'; end   % no bathy survey for 10/01, use 10/02 instead
-surveyFile = fullfile(baseDir, 'data', 'bathy_surveys', sprintf('RODDebbieTimeLagFix_%s%s.xyz', year_str, surveyDateTag));
+% PIV file: <prefix>_PIV_<runDate>_<hourStr>.mat in 'PIV Means' on the drive
+switch year_str
+    case '2013'; pivPrefix = 'ROD2013';
+    case '2021'; pivPrefix = 'DUNEX2021';
+    otherwise;   error('Add a PIV file prefix for year %s', year_str);
+end
+pivFile = fullfile('/Volumes/RODSEX Video', 'PIV Means', ...
+    sprintf('%s_PIV_%s_%s.mat', pivPrefix, runDate, hourStr));
+if ~exist(pivFile, 'file'); error('PIV file not found (drive plugged in?): %s', pivFile); end
 
-% tide lookup from csv file
-tideFile = fullfile(baseDir, 'data', 'tide_duck', 'duck_waterLvls2013.csv');
+yr = str2double(runDate(1:4));  mo = str2double(runDate(5:6));
+dy = str2double(runDate(7:8));  hr = str2double(hourStr(1:2));
+dateLabel     = sprintf('%02d/%02d/%d', mo, dy, yr);
+dateTimeLabel = sprintf('%s, %s', dateLabel, hourStr);
+
+%% paths
+dataRoot  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_Eddies';
+matDir    = fullfile(dataRoot, 'mat_data');
+surveyDir = fullfile(dataRoot, 'data', 'bathy_surveys');
+tideFile  = fullfile(dataRoot, 'data', 'tide_duck', sprintf('duck_waterLvls%s.csv', year_str));
+
+% PIV file
+switch year_str
+    case '2013'   % old location -- change if it moved
+        pivFile = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/PIV_2min/PVLAB_PIV_SurfaceFlows.mat';
+    case '2021'
+        pivFile = fullfile('/Volumes/RODSEX Video', 'PIV Means', sprintf('DUNEX%s_PIV_%s_%s.mat', year_str, runDate, hourStr));
+    otherwise
+        error('Add a PIV file path for year %s', year_str);
+end
+if ~exist(pivFile, 'file'); error('PIV file not found (drive plugged in?): %s', pivFile); end
+
+% video output: match on camera + date_hour only, ignore anything after (_0000, _enh, _test, ...)
+runKey = [runDate '_' hourStr];
+L = dir(fullfile(matDir, [camera '_' runKey '*.mat']));
+if isempty(L); error('No mat file matching %s_%s*.mat in %s', camera, runKey, matDir); end
+if numel(L) > 1
+    [~, iNew] = max([L.datenum]);
+    warning('%d files match; using the newest: %s', numel(L), L(iNew).name);
+    L = L(iNew);
+end
+videoOutputFile = fullfile(L.folder, L.name);
+fprintf('Loading %s\n', L.name);
+
+% survey file: naming differs by year
+if isempty(surveyDate); surveyDate = runDate; end
+switch year_str
+    case '2013'; surveyPattern = sprintf('RODDebbieTimeLagFix_%s.xyz', surveyDate);
+    case '2021'; surveyPattern = sprintf('FRF_%s_*.csv', surveyDate);
+    otherwise;   error('Add a survey filename pattern for year %s', year_str);
+end
+SL = dir(fullfile(surveyDir, surveyPattern));
+if isempty(SL); error('No survey file matching %s in %s', surveyPattern, surveyDir); end
+if numel(SL) > 1; warning('%d survey files match; using %s', numel(SL), SL(1).name); end
+surveyFile = fullfile(SL(1).folder, SL(1).name);
+
+%% auto tide lookup
 Ttide = readtable(tideFile, 'TextType', 'string');
 tideDate = datetime(Ttide.Date, 'InputFormat', 'yyyy/MM/dd');
 tideTimeOfDay = duration(Ttide.Time_LST_LDT_, 'InputFormat', 'hh:mm');
 tideTime = tideDate + tideTimeOfDay;
 waterLevel = Ttide.Verified_m_;
-yr = str2double(year_str); mo = str2double(dateTag(1:2)); dy = str2double(dateTag(3:4)); hr = str2double(hourStr(1:2));
-windowStart = datetime(yr, mo, dy, hr, 0, 0); windowEnd   = windowStart + hours(1);
+windowStart = datetime(yr, mo, dy, hr, 0, 0);
+windowEnd   = windowStart + hours(1);
 inWindow = tideTime >= windowStart & tideTime < windowEnd;
-if ~any(inWindow)
-    error('No tide data found for %s %s (window %s to %s). Check date range (file covers 9/25-10/26).', ...
-        dateTag, hourStr, datestr(windowStart), datestr(windowEnd));
-end
-tide = mean(waterLevel(inWindow), 'omitnan'); % tide-based water lvl for depth adjustment
-% fprintf('Auto tide: %s %s -> mean verified water level = %.3f m (n=%d samples)\n', dateTag, hourStr, tide, sum(inWindow));
+if ~any(inWindow); error('No tide data found for %s %s.', runDate, hourStr); end
+tide = mean(waterLevel(inWindow), 'omitnan');
 
 %% 1) load inputs
-S = load(videoOutputFile);
+S = load(videoOutputFile, 'all_celerity_total', 'all_celerity_time_total');
 all_celerity = S.all_celerity_total;
 t_video      = S.all_celerity_time_total;
 
 %% 2) load + orient PIV data
 P = load(pivFile);
-u_full = -P.u;
+
+% DUNEX2021 PIV files: cX/cY = grid coords, X0/Y0 = u/v time series.
+% The file stores them transposed (x varies down rows), so flip all of them to meshgrid orientation.
+if ~isfield(P,'u') && all(isfield(P, {'cX','cY','X0','Y0'}))
+    P.FRFx = P.cX';  P.FRFy = P.cY';
+    P.u    = permute(P.X0, [2 1 3]);
+    P.v    = permute(P.Y0, [2 1 3]);
+end
+
+if ~isfield(P,'u') && all(isfield(P, {'cX','cY','X0','Y0'}))
+    P.FRFx = P.cX';  P.FRFy = P.cY';
+    P.u    = permute(P.X0, [2 1 3]);
+    P.v    = permute(P.Y0, [2 1 3]);
+end
+
+miss = {'u','v','FRFx','FRFy'};  miss = miss(~isfield(P, miss));
+if ~isempty(miss)
+    error('PIV file is missing: %s. Variables in file: %s', strjoin(miss,', '), strjoin(fieldnames(P)', ', '));
+end
+u_full = piv_u_sign * P.u;
 v_full = P.v;
-t_piv  = P.t;
-if ~isdatetime(t_piv); t_piv = datetime(t_piv, 'ConvertFrom', 'datenum'); end
-if ~isempty(t_piv.TimeZone); t_piv.TimeZone = ''; end
+
+if isfield(P, 't') && ~isempty(P.t)
+    t_piv = P.t(:);
+    if ~isdatetime(t_piv); t_piv = datetime(t_piv, 'ConvertFrom', 'datenum'); end
+    if ~isempty(t_piv.TimeZone); t_piv.TimeZone = ''; end
+else
+    t_piv = windowStart + minutes(30);      % no time vector: treat as one hourly-mean field
+end
+if size(u_full,3) ~= numel(t_piv)
+    error('PIV u has %d time slices but t has %d entries.', size(u_full,3), numel(t_piv));
+end
+t_piv_all = t_piv;                          % full time vector, used by the snapshot/curl sections
 
 FX = P.FRFx;
 FY = P.FRFy;
@@ -63,12 +139,17 @@ end
 pad = minutes(10); % pad for piv time vector
 piv_mask = t_piv >= (min(t_video) - pad) & t_piv <= (max(t_video) + pad);
 if ~any(piv_mask)
-    error('No PIV samples found near the video time window.');
+    error('No PIV samples found near the video time window (video %s to %s, PIV %s to %s).', ...
+        string(min(t_video)), string(max(t_video)), string(min(t_piv)), string(max(t_piv)));
 end
 t_piv  = t_piv(piv_mask);
 u_full = u_full(:,:,piv_mask);
 v_full = v_full(:,:,piv_mask);
-edges_t = t_piv(1):piv_bin:t_piv(end)+piv_bin;
+if isscalar(t_piv)      % single hourly-mean field: one bin spanning all the video points
+    edges_t = [min(t_video) max(t_video)+seconds(1)];
+else
+    edges_t = t_piv(1):piv_bin:t_piv(end)+piv_bin;
+end
 [~,~, pivBinIdx] = histcounts(t_piv, edges_t);
 
 u_bin = cell(numel(edges_t)-1,1);
@@ -165,8 +246,17 @@ depth_grid_speed_adj(~piv_valid) = NaN;
 depth_grid_speed(~piv_valid) = NaN;
 
 %% 7) survey bathy - bin averaged (kept for error/RMSE comparison, not plotted)
-data = readmatrix(surveyFile,'FileType','text');
-x = data(:,1); y = data(:,2); z = data(:,3);
+[~, surveyName] = fileparts(surveyFile);
+data = readmatrix(surveyFile, 'FileType', 'text', 'NumHeaderLines', 0);
+if startsWith(surveyName, 'RODDebbie')          % 2013: x y z columns
+    x = data(:,1);  y = data(:,2);  z = data(:,3);
+elseif startsWith(surveyName, 'FRF_')           % 2021 FRF csv
+    x = data(:,8);  y = data(:,9);  z = data(:,10);
+else
+    error('Unknown survey format: %s. Add a case here.', surveyName);
+end
+ok = ~isnan(x) & ~isnan(y) & ~isnan(z);
+x = x(ok);  y = y(ok);  z = z(ok);
 xi_survey = discretize(x, x_edges);
 yi_survey = discretize(y, y_edges);
 bathy_grid = nan(n_ybins, n_xbins);
@@ -422,39 +512,22 @@ hold on
 clabel(C,hc,'FontSize',7,'Color','k')
 sgtitle(sprintf('Normalized Depth Error %s', dateTimeLabel))
 
-%% PIV vector field snapshot - 10/02 ~13:00
+%% PIV vector field snapshot
 
-dateTag  = '1002'; hourStr = '1300'; year_str = '2013';
-
-baseDir  = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main';
-pivFile  = fullfile(baseDir, 'data', 'PIV_2min', 'PVLAB_PIV_SurfaceFlows.mat');
-matFile  = fullfile(baseDir, 'mat_data', sprintf('%s_%s.mat', dateTag, hourStr));
-
-% load PIV, find frame nearest the target time
-P = load(pivFile);
 FX = P.FRFx; FY = P.FRFy;
-t_piv = P.t;
-if ~isdatetime(t_piv); t_piv = datetime(t_piv, 'ConvertFrom', 'datenum'); end
-if ~isempty(t_piv.TimeZone); t_piv.TimeZone = ''; end
+t_piv = t_piv_all;                           % full time vector (section 2 trimmed t_piv)
 
-target_time = datetime(str2double(year_str), str2double(dateTag(1:2)), str2double(dateTag(3:4)), ...
-    str2double(hourStr(1:2)), str2double(hourStr(3:4)), 0);
+target_time = windowStart;                   % hour start; change to look at another time
 [~, k] = min(abs(t_piv - target_time));
 fprintf('Using PIV frame %d: %s\n', k, string(t_piv(k)));
-
 u_frame = P.u(:,:,k);
 v_frame = P.v(:,:,k);
 
-% optional grayscale background (first available rectified frame from that hour)
-haveBG = exist(matFile,'file');
-if haveBG
-    S = load(matFile, 'rectified_frames','X','Y');
-    bg = [];
-    for kk = 1:numel(S.rectified_frames)
-        if ~isempty(S.rectified_frames{kk}); bg = S.rectified_frames{kk}; break; end
-    end
-    haveBG = ~isempty(bg);
-end
+% optional grayscale background: first rectified frame from the run (reads only that one cell)
+m  = matfile(videoOutputFile);
+c0 = m.rectified_frames(1,1);   bg = c0{1};
+haveBG = ~isempty(bg);
+if haveBG; S.X = m.X; S.Y = m.Y; end
 
 % plot
 figure; hold on
@@ -475,7 +548,7 @@ box on
 set(gca,'YDir','normal')
 xlabel('x (m)'); ylabel('y (m)')
 xlim([min(FX(:)) max(FX(:))]); ylim([min(FY(:)) max(FY(:))])
-title(sprintf('PIV Surface Currents - %s/%s %s', dateTag(1:2), dateTag(3:4), string(t_piv(k),'HH:mm')), 'FontSize',12)
+title(sprintf('PIV Surface Currents - %s %s', dateLabel, string(t_piv(k),'HH:mm')), 'FontSize',12);
 xlim([75 165]); ylim([600 830])
 
 % reference vector (scale-matched to the field arrows above)
@@ -493,9 +566,7 @@ text(qx0, qy0 + 0.03*range(FY(:)), '1 m/s', 'FontWeight','bold')
 % averaged -- same aggregation the Fbr curl map uses (mean over every
 % along-crest sample collected that hour), so the two are comparable.
 
-hour_start = datetime(str2double(year_str), str2double(dateTag(1:2)), str2double(dateTag(3:4)), ...
-    str2double(hourStr(1:2)), 0, 0);
-hour_end   = hour_start + hours(1);
+hour_start = windowStart;  hour_end = windowEnd;
 
 in_hour   = t_piv >= hour_start & t_piv < hour_end;
 frame_idx = find(in_hour);
