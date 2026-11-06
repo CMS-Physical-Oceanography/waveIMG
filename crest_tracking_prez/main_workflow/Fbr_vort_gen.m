@@ -1,11 +1,10 @@
-
 % Fbr, vort calculations
 
 %% USER INPUT
-year_str   = '2013';
-runDate    = '20131002';        % yyyymmdd of the video run
-hourStr    = '1200';            % hhmm
-camera     = 'rod13';      % 2021: 'NorthTower' | 'SouthTower'
+year_str   = '2021';
+runDate    = '20210829';        % yyyymmdd of the video run
+hourStr    = '1300';            % hhmm
+camera     = 'NorthTower';      % 2021: 'NorthTower' | 'SouthTower'
                                 % 2013: 'rod13'  (prefix of the saved .mat)
 
 data_source = 'raw';            % 'raw' or 'piv'
@@ -14,6 +13,7 @@ bin_size = 5;          % m
 piv_bin  = minutes(2);
 g        = 9.81;
 
+h_min = 0.2;           % m, exclude points with depth below this from Fbr (h = c^2/g - tide; Fbr ~ 1/h blows up)
 c_speed_min = 1;       % m/s, exclude unrealistic/erroneous celerity values
 c_speed_max = 7;
 
@@ -39,7 +39,7 @@ tideFile  = fullfile(dataRoot, 'data', 'tide_duck', sprintf('duck_waterLvls%s.cs
 % buoy file (wave period for Fbr) -- 2013 location is the old one; change if it moved
 switch year_str
     case '2013'
-        buoyFile = fullfile(dataRoot, 'data', 'buoy_data', '2013_buoyHsDuck.txt');
+        buoyFile = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/buoy_data/duck_offshore_cond.txt';
     case '2021'
         buoyFile = fullfile(dataRoot, 'data', 'buoy_data', '2021_buoyHsDuck.txt');
     otherwise
@@ -49,8 +49,8 @@ end
 % PIV file (only needed when data_source = 'piv')
 if strcmp(data_source, 'piv')
     switch year_str
-        case '2013'  
-            pivFile = fullfile('/Volumes/RODSEX Video', 'PIV Means', sprintf('ROD%s_PIV_%s_%s.mat', year_str, runDate, hourStr));
+        case '2013'   % old location -- change if it moved
+            pivFile = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/PIV_2min/PVLAB_PIV_SurfaceFlows.mat';
         case '2021'
             pivFile = fullfile('/Volumes/RODSEX Video', 'PIV Means', sprintf('DUNEX%s_PIV_%s_%s.mat', year_str, runDate, hourStr));
         otherwise
@@ -205,7 +205,9 @@ flip = cx_pts > 0;
 cx_pts(flip) = -cx_pts(flip);
 Fbr_dir_pts = atan2(cy_pts, cx_pts);
 
-valid = ~isnan(c_pts) & ~isnan(h_pts) & c_pts > 0 & h_pts > 0 & ~isnan(T_mean);
+valid = ~isnan(c_pts) & ~isnan(h_pts) & c_pts > 0 & h_pts > h_min & ~isnan(T_mean);
+fprintf('Points removed by h_min = %.2f m: %d (%.1f %% of points with valid c)\n', h_min, ...
+    sum(~isnan(h_pts) & h_pts > 0 & h_pts <= h_min), 100*sum(~isnan(h_pts) & h_pts > 0 & h_pts <= h_min)/sum(~isnan(h_pts) & h_pts > 0))
 
 Fbr_mag_pts(valid) = 0.9*(g./(c_pts(valid).*h_pts(valid).*T_mean)).* area_times_sin(valid);
 fprintf('Valid force points: %d\n',sum(valid))
@@ -446,13 +448,13 @@ axis tight; box on; grid minor
 colormap(gca, cmocean('balance'));
 cb = colorbar; cb.Label.String = '\nabla \times F_{br} [s^{-2}]';
 cb.Label.Interpreter = 'tex';
-clim([-.3 .3]); % orig +/-.05
+clim([-.05 .05])
 xlabel('Cross-shore [m]')
 ylabel('Alongshore [m]')
 title(sprintf('\\nabla \\times F_{br} - %s', dateTimeLabel), ...
     'Interpreter', 'tex','FontSize', 15)
-% xlim([85 170]); ylim([623 827]) % og from 2013...
-xlim([70 300]); ylim([450 1100])
+% xlim([85 170]); ylim([623 827]) % og for 2013
+xlim([70 300]); ylim([450 1100]) 
 
 
 
@@ -549,6 +551,170 @@ ylabel('Alongshore [m]')
 title('F_{br} Vectors and Along-Crest Curl(F_{br})', FontSize=15);
 view([-90 90]);
 
+
+%% Fbr VARIABILITY DIAGNOSTIC: which inputs drive the spread in Fbr?
+% Fbr = 0.9*g/(c*h*T) * 0.11*W^2*tan(th)*sec(th),    h = c^2/g - tide
+% T and theta_r are constants within an hour, so point-to-point (and
+% wave-to-wave) variability can only come from W (squared) and c (which
+% enters twice: directly, and through h). In log space:
+%       ln Fbr = K + 2 ln W - ln c - ln h
+% so each term's share of var(ln Fbr) is cov(term, ln Fbr)/var(ln Fbr);
+% the shares sum to 1.
+
+sig_c_rel     = 0.10;   % ASSUMED 1-sigma relative uncertainty in c (edit)
+sig_W_rel     = 0.20;   % ASSUMED 1-sigma relative uncertainty in W (edit)
+min_pts_crest = 5;      % min points for a crest to count in the wave-by-wave stats
+h_small       = 0.3;    % [m] flag depths below this (Fbr ~ 1/h blows up)
+
+dv = valid & ~isnan(Fbr_mag_pts) & crest_width_pts > 0;
+F  = Fbr_mag_pts(dv);   W = crest_width_pts(dv);
+c  = c_pts(dv);         h = h_pts(dv);
+fid_d = frame_ID(dv);
+K  = log(0.9*g*0.11*tan(theta_r)*sec(theta_r)/T_mean);
+
+lF = log(F);
+terms = [2*log(W), -log(c), -log(h)];
+term_names = {'2 ln W (crest width)', '-ln c (direct)', '-ln h (h = c^2/g - tide)'};
+chk = max(abs(lF - (K + sum(terms,2))));
+fprintf('\n===== Fbr VARIABILITY DIAGNOSTIC (%s) =====\n', dateTimeLabel)
+fprintf('N points: %d   decomposition check (should be ~0): %.2e\n', numel(F), chk)
+
+cs    = @(a,b) mean((a-mean(a)).*(b-mean(b)));
+share = @(Tm,y) arrayfun(@(i) cs(Tm(:,i),y), 1:size(Tm,2)) / cs(y,y);
+
+% ---- 1) variance decomposition, all points -------------------------------
+sh_all = share(terms, lF);
+fprintf('\n-- Share of var(ln Fbr), all points --\n')
+for i = 1:3; fprintf('  %-28s %6.1f %%\n', term_names{i}, 100*sh_all(i)); end
+fprintf('  %-28s %6.1f %%  (c direct + via h)\n', 'c total', 100*(sh_all(2)+sh_all(3)))
+fprintf('  std(ln Fbr) = %.2f   p90/p10 of Fbr = %.1fx\n', std(lF), prctile(F,90)/prctile(F,10))
+fprintf('  corr(ln W, ln c) = %.2f\n', corr(log(W), log(c)))
+
+% ---- 2) local sensitivity (elasticities) + error propagation -------------
+E_W = 2*ones(size(F));                    % dlnF/dlnW
+E_c = -(1 + 2*(h + tide)./h);             % dlnF/dlnc, since dlnh/dlnc = 2(h+tide)/h
+relerr_W = abs(E_W)*sig_W_rel;
+relerr_c = abs(E_c)*sig_c_rel;
+relerr_tot = hypot(relerr_W, relerr_c);
+fprintf('\n-- Local sensitivity --\n')
+fprintf('  dlnF/dlnW = 2 (constant)\n')
+fprintf('  dlnF/dlnc : median %.1f, p90 %.1f   (a 1%% error in c -> that %% error in Fbr)\n', median(E_c), prctile(E_c,10))
+fprintf('  Points with h < %.2f m: %.1f %%\n', h_small, 100*mean(h < h_small))
+fprintf('  Propagated rel. error in Fbr (sig_W=%.0f%%, sig_c=%.0f%%): median %.0f %% (W part %.0f %%, c part %.0f %%)\n', ...
+    100*sig_W_rel, 100*sig_c_rel, 100*median(relerr_tot), 100*median(relerr_W), 100*median(relerr_c))
+
+% ---- 3) counterfactual: let only one input vary ---------------------------
+c0 = median(c);  h0 = c0^2/g - tide;  W0 = median(W);
+F_Wonly = exp(K) * W.^2  ./ (c0*h0);      % only W varies
+F_conly = exp(K) * W0^2  ./ (c .* h);     % only c varies (direct + via h)
+cv = @(x) std(x)/mean(x);
+fprintf('\n-- Coefficient of variation of Fbr if only one input varies --\n')
+fprintf('  actual %.2f | only W %.2f | only c %.2f\n', cv(F), cv(F_Wonly), cv(F_conly))
+
+% ---- 4) wave-by-wave: rebuild crest IDs, then between vs within crest -----
+% (same trace/snap approach as the curl section; uses its frame grouping)
+crest_gid = nan(size(x_pts));  gcount = 0;
+for fnum = 1:numel(up_c)
+    pt_idx = p_by_frame_c{fnum};
+    pt_idx = pt_idx(dv(pt_idx));
+    if isempty(pt_idx); continue; end
+    fkey = up_c(fnum);
+    if ~isKey(key2col, fkey); continue; end
+    w_idx = w_by_frame{key2col(fkey)};
+    if numel(w_idx) < 2; continue; end
+    wx = crest_width_pts_all(w_idx,1);  wy = crest_width_pts_all(w_idx,2);
+    [crestID_w, ~] = trace_crest_paths(wx, wy, max_crest_link_dist);
+    [nn, dm] = knnsearch([wx wy], [x_pts(pt_idx) y_pts(pt_idx)]);
+    ok = dm <= max_match_dist;
+    crest_gid(pt_idx(ok)) = gcount + crestID_w(nn(ok));
+    gcount = gcount + max(crestID_w);
+end
+
+gid = crest_gid(dv);
+okg = ~isnan(gid);
+[~,~,g1] = unique(gid(okg));
+cnt = accumarray(g1, 1);
+sel = false(size(gid));  sel(okg) = cnt(g1) >= min_pts_crest;
+[~,~,gi] = unique(gid(sel));
+nCrest = max(gi);
+fprintf('\n-- Wave-by-wave (%d crests with >= %d pts) --\n', nCrest, min_pts_crest)
+
+crestMean = @(v) accumarray(gi, v, [], @mean);
+Ts   = terms(sel,:);   lFs = lF(sel);
+Tc   = [crestMean(Ts(:,1)) crestMean(Ts(:,2)) crestMean(Ts(:,3))];
+lFc  = crestMean(lFs);
+Tw   = Ts - Tc(gi,:);  lFw = lFs - lFc(gi);          % within-crest anomalies
+
+v_tot = cs(lFs,lFs);  v_w = cs(lFw,lFw);  v_b = v_tot - v_w;
+fprintf('  var(ln Fbr): %.1f %% between crests, %.1f %% within a crest (along-crest)\n', 100*v_b/v_tot, 100*v_w/v_tot)
+sh_b = share(Tc(gi,:), lFc(gi));   % between-crest drivers
+sh_w = share(Tw, lFw);             % within-crest drivers
+fprintf('  Between-crest drivers :  W %.0f %% | c direct %.0f %% | h %.0f %%\n', 100*sh_b)
+fprintf('  Within-crest drivers  :  W %.0f %% | c direct %.0f %% | h %.0f %%\n', 100*sh_w)
+
+% crest-level medians for plotting
+W_cr = accumarray(gi, W(sel), [], @median);
+c_cr = accumarray(gi, c(sel), [], @median);
+F_cr = accumarray(gi, F(sel), [], @median);
+
+% per-frame series
+[uf, ~, gf] = unique(posixtime(fid_d));
+F_fr = accumarray(gf, F, [], @median);
+W_fr = accumarray(gf, W, [], @median);
+c_fr = accumarray(gf, c, [], @median);
+t_fr = datetime(uf, 'ConvertFrom', 'posixtime');
+fprintf('  Frame-to-frame (median per frame): corr(Fbr,W) = %.2f, corr(Fbr,c) = %.2f\n', corr(F_fr,W_fr), corr(F_fr,c_fr))
+
+% % ---- figures ---------------------------------------------------------------
+% figure('Name','Fbr diagnostic: all points');
+% tiledlayout(2,3,'TileSpacing','compact');
+% 
+% nexttile
+% bar([sh_all(1) sh_all(2) sh_all(3) sh_all(2)+sh_all(3)]*100)
+% set(gca,'XTickLabel',{'W^2','c direct','h','c total'}); ylabel('% of var(ln F_{br})')
+% title('Variance share'); grid on; box on
+% 
+% nexttile
+% scatter(W, F, 6, c, 'filled'); set(gca,'XScale','log','YScale','log'); colorbar
+% xlabel('Crest width W [m]'); ylabel('F_{br}'); title('F_{br} vs W (color = c)'); grid on; box on
+% 
+% nexttile
+% scatter(c, F, 6, h, 'filled'); set(gca,'YScale','log'); colorbar
+% xlabel('c [m/s]'); ylabel('F_{br}'); title('F_{br} vs c (color = h)'); grid on; box on
+% 
+% nexttile
+% scatter(h, F, 6, c, 'filled'); set(gca,'YScale','log'); xline(h_small,'r--'); colorbar
+% xlabel('h [m]'); ylabel('F_{br}'); title('F_{br} vs h'); grid on; box on
+% 
+% nexttile
+% bar([cv(F) cv(F_Wonly) cv(F_conly)])
+% set(gca,'XTickLabel',{'actual','only W varies','only c varies'}); ylabel('std/mean')
+% title('CV of F_{br}'); grid on; box on
+% 
+% nexttile
+% histogram(relerr_tot*100, 'FaceColor',[.5 .5 .5], 'EdgeColor','none'); hold on
+% histogram(relerr_W*100, 'FaceColor',[0.30 0.55 0.95], 'FaceAlpha',.5, 'EdgeColor','none')
+% histogram(relerr_c*100, 'FaceColor',[0.95 0.55 0.20], 'FaceAlpha',.5, 'EdgeColor','none')
+% xlabel('Propagated rel. error in F_{br} [%]'); legend('total','from W','from c'); title('Error budget (assumed \sigma)')
+% grid on; box on
+% sgtitle(sprintf('F_{br} variability drivers - %s', dateTimeLabel))
+% 
+% figure('Name','Fbr diagnostic: wave-by-wave');
+% tiledlayout(1,3,'TileSpacing','compact');
+% 
+% nexttile
+% loglog(W_cr, F_cr, 'o', 'MarkerFaceColor',[0.10 0.30 0.80]); grid on; box on
+% xlabel('Crest median W [m]'); ylabel('Crest median F_{br}'); title('Between crests: F_{br} vs W')
+% 
+% nexttile
+% semilogy(c_cr, F_cr, 'o', 'MarkerFaceColor',[0.80 0.30 0.05]); grid on; box on
+% xlabel('Crest median c [m/s]'); ylabel('Crest median F_{br}'); title('Between crests: F_{br} vs c')
+% 
+% nexttile
+% yyaxis left;  semilogy(t_fr, F_fr, '-'); ylabel('median F_{br}')
+% yyaxis right; plot(t_fr, W_fr, '-'); hold on; plot(t_fr, c_fr, '-'); ylabel('median W [m], c [m/s]')
+% legend('F_{br}','W','c'); title('Frame-to-frame'); grid on; box on
+% sgtitle(sprintf('Wave-by-wave F_{br} - %s', dateTimeLabel))
 
 %% LOCAL FUNCTIONS
 

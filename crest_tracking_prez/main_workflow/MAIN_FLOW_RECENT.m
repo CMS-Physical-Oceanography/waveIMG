@@ -15,16 +15,16 @@ if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 year = 2013;
 tower = 'north'; % 2021: 'north' or 'south'
 runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs), or '_test'
-maxFrames = 250;        % used for test runs; set to 'Inf' for full videos
+maxFrames = 200;        % used for test runs; set to 'Inf' for full videos
 
-enhance_image = true;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
+enhance_image = false;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
 if enhance_image; runTag = [runTag '_enh']; end    % enhanced runs get their own file names
 
 switch year
     case 2013 
         IDs      = {'rod13'};
-        dateTag  = '20131023';        % folder prefix, yyyymmdd
-        hourList = 1600;              % -> 20131024_12
+        dateTag  = '20131021';        % folder prefix, yyyymmdd
+        hourList = 1500;              % -> 20131024_12
         numFiles = 1;                 % each vid is 5 mins, so set to 12 for full hour run
         startIdx = 1;
 

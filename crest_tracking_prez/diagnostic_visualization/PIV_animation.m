@@ -1,7 +1,7 @@
 
 % 2-min PIV plot animation
 
-pivFile = '/Volumes/RODSEX Video/PIV Means/ROD2013_PIV_20131002_1200.mat';
+pivFile = '/Volumes/RODSEX Video/PIV Means/ROD2013_PIV_20131020_0903.mat';
 P = load(pivFile);
 
 % map variable names onto the common set (u, v, FRFx, FRFy, t)
