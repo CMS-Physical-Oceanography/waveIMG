@@ -1,10 +1,10 @@
 % Fbr, vort calculations
 
 %% USER INPUT
-year_str   = '2021';
-runDate    = '20210829';        % yyyymmdd of the video run
+year_str   = '2018';
+runDate    = '20180920';        % yyyymmdd of the video run
 hourStr    = '1300';            % hhmm
-camera     = 'NorthTower';      % 2021: 'NorthTower' | 'SouthTower'
+camera     = 'NorthTower21';      % 2021: 'NorthTower21' | 'SouthTower21'
                                 % 2013: 'rod13'  (prefix of the saved .mat)
 
 data_source = 'raw';            % 'raw' or 'piv'
@@ -39,7 +39,7 @@ tideFile  = fullfile(dataRoot, 'data', 'tide_duck', sprintf('duck_waterLvls%s.cs
 % buoy file (wave period for Fbr) -- 2013 location is the old one; change if it moved
 switch year_str
     case '2013'
-        buoyFile = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/buoy_data/duck_offshore_cond.txt';
+        buoyFile = fullfile(dataRoot, 'data', 'buoy_data', '2013_buoyHsDuck.txt');
     case '2021'
         buoyFile = fullfile(dataRoot, 'data', 'buoy_data', '2021_buoyHsDuck.txt');
     otherwise
@@ -454,7 +454,7 @@ ylabel('Alongshore [m]')
 title(sprintf('\\nabla \\times F_{br} - %s', dateTimeLabel), ...
     'Interpreter', 'tex','FontSize', 15)
 % xlim([85 170]); ylim([623 827]) % og for 2013
-xlim([70 300]); ylim([450 1100]) 
+xlim([70 200]); ylim([650 1100]) 
 
 
 

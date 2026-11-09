@@ -1,8 +1,8 @@
 
 % debbie bathy raw
 filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
-    'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131002.xyz'];
-data = readmatrix(filename,'FileType','text');
+    'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131022.xyz'];
+data = readmatrix(surveyFile, 'FileType', 'text', 'NumHeaderLines', 0);
 
 x = data(:,1);
 y = data(:,2);
@@ -19,9 +19,9 @@ colorbar
 %% debbie interp - linear interpolation for visualization
 
 filename = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/' ...
-    'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131002.xyz'];
-data = readmatrix(filename,'FileType','text');
- 
+    'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131022.xyz'];
+data = readmatrix(surveyFile, 'FileType', 'text', 'NumHeaderLines', 0); 
+
 x = data(:,1);
 y = data(:,2);
 z = data(:,3);
@@ -52,7 +52,7 @@ xlabel('Cross-Shore [m]')
 ylabel('Alongshore [m]')
 title('Interpolated Survey Bathy, 10/2/2013')
 
-xlim([90 170])
+xlim([115 180])
 ylim([602 1000])
 
 %%

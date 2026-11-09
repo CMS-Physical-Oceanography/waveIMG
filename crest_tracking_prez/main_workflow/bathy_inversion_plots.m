@@ -2,13 +2,13 @@
 % BATHY INVERSION  Loads video-derived celerity + survey bathy for 1 hour, inverts celerity to depth, & comparison plots.
 
 %% USER INPUT
-year_str   = '2021';
-runDate    = '20210904';        % yyyymmdd of the video run
-hourStr    = '1600';            % hhmm
-camera     = 'NorthTower';      % 2021: 'NorthTower' | 'SouthTower' 
+year_str   = '2018';
+runDate    = '20180920';        % yyyymmdd of the video run
+hourStr    = '1000';            % hhmm
+camera     = 'SouthTower18';      % 2018/21: 'NorthTowerXX' | 'SouthTowerXX' ; XX = 18, 21
                                 % 2013: 'rod13'  (prefix of the saved .mat)
 
-surveyDate = '20210905';        % yyyymmdd of bathy survey to use; '' = same day as runDate
+surveyDate = '20180919';        % yyyymmdd of bathy survey to use; '' = same day as runDate
 
 bin_size = 5;    % m
 min_pts  = 3;    % min survey pts per bin                % changed from 5 (original) to 3 !!!!!!
@@ -43,6 +43,7 @@ fprintf('Loading %s\n', L.name);
 if isempty(surveyDate); surveyDate = runDate; end
 switch year_str
     case '2013'; surveyPattern = sprintf('RODDebbieTimeLagFix_%s.xyz', surveyDate);
+    case '2018'; surveyPattern = sprintf('FRF_%s_*.csv', surveyDate);
     case '2021'; surveyPattern = sprintf('FRF_%s_*.csv', surveyDate);
     otherwise;   error('Add a survey filename pattern for year %s', year_str);
 end
@@ -105,7 +106,8 @@ xlabel('Cross-shore [m]');
 ylabel('Alongshore [m]')
 title(sprintf('c-derived Bathy - %s', dateTimeLabel), 'FontSize',15)
 grid minor; box on
-% xlim([90 170]); ylim([602 1000])
+% xlim([90 170]); ylim([602 1000]);
+xlim([115 180]);
 
 %% survey format is chosen from the file name
 [~, surveyName] = fileparts(surveyFile);
@@ -152,7 +154,7 @@ cb = colorbar; cb.Label.String = 'Depth [m, NAVD88]';
 xlabel('Cross-shore [m]'); ylabel('Alongshore [m]')
 title(sprintf('Survey Bathy %s - 5x5m bins', surveyLabel));
 grid minor; box on
-xlim([90 170]); ylim([602 1000]); clim([0 3])
+xlim([100 190]); ylim([602 1000]); clim([0 3])
 hold on
 plot(x, y, 'k.', 'MarkerSize', 1)
 

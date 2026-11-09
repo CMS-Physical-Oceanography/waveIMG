@@ -43,9 +43,18 @@ switch ID
         info.X_min = 75;     info.X_max = 250;
         info.Y_min = 500;    info.Y_max = 750;
 
-    case {'top18','bot18'}
+
+    case 'top18'    % RSEX2018 north-looking camera (12 mm lens)
         info.vid_dir       = 'RSEX18MP4';
-        info.vid_name_root = 'TODO';               % TODO: check filenames in that folder
+        info.vid_name_root = 'RSEX18_NorthTower';
+        info.X_min = 60;     info.X_max = 300;
+        info.Y_min = 580;    info.Y_max = 1000;
+
+    case 'bot18'    % RSEX2018 offshore-looking camera (8 mm lens)
+        info.vid_dir       = 'RSEX18MP4';
+        info.vid_name_root = 'RSEX18_SouthTower';   % GUESS: confirm against the files
+        info.X_min = 50;     info.X_max = 300;
+        info.Y_min = 500;    info.Y_max = 850;
 
     case 'rod13'
         info.vid_dir       = '';                   % hour folders sit at the drive root

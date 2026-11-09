@@ -12,21 +12,33 @@ matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/
 if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
 % INPUT
-year = 2013;
+year = 2018;
 tower = 'north'; % 2021: 'north' or 'south'
-runTag    = '_test';    % set to '' for real runs (prevents overwriting saved outputs), or '_test'
-maxFrames = 200;        % used for test runs; set to 'Inf' for full videos
+runTag    = '';    % set to '' for real runs (prevents overwriting saved outputs), or '_test'
+maxFrames = 300;        % used for test runs; set to 'Inf' for full videos
 
-enhance_image = false;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
+enhance_image = true;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
+foamFrame = 5;    % frame used to set the foam/water threshold for glare at start, if n/a set = 1
+
 if enhance_image; runTag = [runTag '_enh']; end    % enhanced runs get their own file names
 
 switch year
     case 2013 
         IDs      = {'rod13'};
-        dateTag  = '20131021';        % folder prefix, yyyymmdd
-        hourList = 1500;              % -> 20131024_12
-        numFiles = 1;                 % each vid is 5 mins, so set to 12 for full hour run
+        dateTag  = '20131022';        % folder prefix, yyyymmdd
+        hourList = 1600;              % -> 20131024_12
+        numFiles = 12;                 % each vid is 5 mins, so set to 12 for full hour run
         startIdx = 1;
+
+    case 2018 % rsex18
+        switch lower(tower)
+            case 'north'; IDs = {'top18'};
+            case 'south'; IDs = {'bot18'};
+            case 'both';  IDs = {'top18','bot18'};
+            otherwise;    error('tower must be ''north'', ''south'', or ''both'' (got ''%s'').', tower);
+        end
+        dateTag  = '20180920_1000';    % prefix, yyyymmdd_hhmm 
+        hourList = 0; numFiles = 1; startIdx = 1;    
 
     case 2021 % dunex
         switch lower(tower)
@@ -191,11 +203,13 @@ while hasFrame(vid) && f < totalFramesNeeded
     rect = interp2(U, V, raw, Uint, Vint, 'linear', nan);           % rectified frame
 
     if enhance_image
-        if f == 1    % threshold from the first frame, held fixed for the whole video
+        if f == foamFrame
             foam_th = water_foam_threshold(rect(~isnan(rect)), 0);
-            fprintf('  foam/water threshold: %.1f\n', foam_th);
+            fprintf('  foam/water threshold (frame %d): %.1f\n', f, foam_th);
         end
-        rect = 255./(1+exp(-3*pi/2*(rect-foam_th)/(255-foam_th)));
+        if exist('foam_th','var')
+            rect = 255./(1+exp(-3*pi/2*(rect-foam_th)/(255-foam_th)));
+        end
     end
 
     win = [win(2:3), {rect}];                                       % drop oldest, add newest
@@ -650,8 +664,10 @@ fprintf('\n=== DONE: %d total files processed, %d total celerity points ===\n', 
 
 % label each run by tower
 switch ID
-    case 'top21';  towerTag = 'NorthTower';
-    case 'bot21';  towerTag = 'SouthTower';
+    case 'top21';  towerTag = 'NorthTower21';
+    case 'bot21';  towerTag = 'SouthTower21';
+    case 'top18';  towerTag = 'NorthTower18';
+    case 'bot18';  towerTag = 'SouthTower18';
     otherwise;     towerTag = ID;
 end
 

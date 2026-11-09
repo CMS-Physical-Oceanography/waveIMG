@@ -3,11 +3,11 @@
 
 %% USER INPUT
 year_str   = '2021';
-runDate    = '20210904';        % yyyymmdd of the video run
-hourStr    = '1600';            % hhmm
-camera     = 'NorthTower';      % 2021: 'NorthTower' | 'SouthTower'
+runDate    = '20210829';        % yyyymmdd of the video run
+hourStr    = '1300';            % hhmm
+camera     = 'NorthTower21';      % 2021: 'NorthTower21' | 'SouthTower21'
                                 % 2013: 'rod13'  (prefix of the saved .mat)
-surveyDate = '20210905';        % yyyymmdd of bathy survey to use; '' = same day as runDate
+surveyDate = '20210830';        % yyyymmdd of bathy survey to use; '' = same day as runDate
 
 bin_size = 5;          % m
 piv_bin  = minutes(2);
@@ -601,7 +601,8 @@ cb.Label.Interpreter = 'tex';
 xlabel('Cross-shore [m]')
 ylabel('Alongshore [m]')
 title('PIV Surface Current Vorticity', FontSize=15)
-xlim([85 170]); ylim([623 827])
+% xlim([85 170]); ylim([623 827])
+xlim([70 200]); ylim([650 1100])
 clim([-.05 .05])
 
 %% print out rmse
