@@ -1,0 +1,59 @@
+select_CNN_training.mlapp
+==========================
+
+Purpose
+-------
+Wacom-friendly App Designer annotation tool for making 3-frame CNN/UNet
+training samples from rectified wave video.
+
+Inputs
+------
+1. Local waveIMG root directory.
+2. Directory containing the new mp4/avi video(s).
+3. Camera ID understood by define_camera_parameters_new(), e.g. top21,
+   bot21, or rod13.
+
+Pre-processing
+--------------
+The app follows the geometry and 3-frame stack logic in MAIN_FLOW_RECENT.m:
+- VideoReader and info.freq determine the sampled frame sequence.
+- Frames are converted to grayscale.
+- Frames are rectified onto the X/Y grid using getUVfromXYZ().
+- Three consecutive sampled frames are stored as RGB channels in IMG.
+- Optional intensity enhancement is available.
+
+Annotation classes
+------------------
+0   background / outside image
+127 water
+255 breaking wave / foam
+
+The initial mask is background outside the valid rectified image and water
+inside it. The annotator paints regions with a Wacom pen using the
+Background, Water, and Breaking buttons. Undo/reset and an erase-to-water
+tool are provided.
+
+Archive
+-------
+Files are saved under:
+  trainingData/trainingImages/<video>_Frame_<middle-frame>.png
+  trainingData/trainingLabels/<video>_Frame_<middle-frame>.png
+  trainingData/trainingMeta/<video>_Frame_<middle-frame>.mat
+
+The .mat metadata includes the source video, 3 contributing video frame
+indices, camera ID, X/Y coordinates, grid spacing, enhancement setting,
+class definitions, and output filenames.
+
+Important
+---------
+The app does not modify GitHub. It writes only to the selected local
+waveIMG directory.
+
+Compatibility note
+------------------
+The .mlapp was produced by replacing the source-code document inside the
+existing App Designer package. The runtime class is self-contained, but the
+App Designer design-time appModel is inherited from the older application.
+If App Designer shows stale design-time component metadata, use the .m
+source (select_CNN_training.m) as the authoritative editable source or
+open and save the app in the target MATLAB release once.
