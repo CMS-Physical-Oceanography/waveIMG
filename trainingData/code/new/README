@@ -1,0 +1,38 @@
+CNNTrainingAnnotator
+====================
+
+Usage
+-----
+1. Put CNNTrainingAnnotator.m on the MATLAB path.
+2. Run:
+      app = CNNTrainingAnnotator;
+3. Click Browse MP4... and select the source .mp4 file.
+4. Set the center frame. The app loads frames [N-1 N N+1] as a pseudo-RGB image.
+5. Click Add region and encircle foreground regions with the Wacom/tablet or mouse.
+6. Click Remove region to encircle areas that should be removed from the foreground mask.
+7. Use Undo last or Clear mask as needed.
+8. Select the archive directory with Browse... and click Save annotation.
+
+Archive layout
+--------------
+<archive>/
+  trainingImage/<video>_f######.png
+  trainingLabel/<video>_f######.png
+  trainingLog/<video>_f######.mat
+  trainingLog/<video>_f######.txt
+
+The .mat log contains:
+- sourceVideo
+- frameRate
+- frameNumbers
+- centerFrame
+- imageFilename
+- labelFilename
+- imageSize / maskSize
+- regionHistory: ordered add/remove polygons and the frame numbers
+- maskPixelIndex
+- maskPixelCount
+- created
+- archiveRoot
+
+The annotated label PNG contains 0 for background and 127 for water/beach and 255 for encircled breaking waves.

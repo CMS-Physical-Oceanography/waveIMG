@@ -1,8 +1,8 @@
 %
 % get a structure with training data
-trainDataPath = '/home/derek/projects/ShortCrests/IMG/data/trainingFullImages/';
-imageDir      = [trainDataPath, 'trainingImages/'];
-labelDir      = [trainDataPath, 'trainingLabels/'];
+trainDataPath = '/Users/derekgrimes/Library/CloudStorage/OneDrive-UNC-Wilmington/SED/Prezley/TrainingData/';
+imageDir      = [trainDataPath, 'trainingImage/'];
+labelDir      = [trainDataPath, 'trainingLabel/'];
 %
 %             background, nonFront, front
 classNames = ["bckgrnd" , "nonFront" ,  "front"];
@@ -22,8 +22,8 @@ imdsTrain  = subset(TrainingData,perm(1:Ntrain));
 %
 %
 % get input layer size
-img = readimage(imds,perm(10));
-lbl = readimage(pxds,perm(10));
+img = readimage(imds,perm(3));
+lbl = readimage(pxds,perm(3));
 [Ny,Nx,Nt] = size(img);
 %
 % determine the ratios of pixel classes
@@ -43,6 +43,10 @@ weights = 1./frac./unitGain
 numFilters = 16;
 filterSize = 5;
 numClasses = 3;
+% Load existing:
+load('~/git/waveIMG/mat_data/imgUNet_v0.mat')
+imgNet0 = imgNet;
+% build from scratch:
 layers = [
     imageInputLayer([Ny Nx Nt])
     convolution2dLayer(filterSize,numFilters,'Padding','same')
@@ -61,23 +65,33 @@ layers = [
 %
 %
 %
+% 1. Apply custom geometric augmentations to your CombinedDatastore
+dsTrainAug = transform(imdsTrain, @augmentImageData);
+
+% 2. Preview one augmented batch to verify the transformations look right
+sampleData = preview(dsTrainAug);
+imshow(sampleData{1});
+%
 options = trainingOptions('sgdm',...
                           'InitialLearnRate',0.005,...'MaxEpocs', 4,...
                           'Shuffle','every-epoch',...
                           'ValidationFrequency',5,...
+                          'MaxEpochs',50,...
                           'Verbose',0,...
                           'ValidationData',imdsValid,...                          
                           'ExecutionEnvironment','parallel',...                          
                           'Plots','training-progress');
 %
-imgNet = trainNetwork(imdsTrain,layers,options);
+imgNet = trainNetwork(dsTrainAug,layers,options);
+% $$$ imgNet = trainNetwork(dsTrainAug,imgNet0.Layers,options);
 %
 % visually evaluate skill
 % get input layer size
-imIn = '/data0/ShortCrests/IMG/data/trainingFullImages/trainingImages/image_1014_1315_0392.png'
-[~,imNum]= ismember(imIn,imds.Files);
-img = readimage(imds,perm(imNum));
-lbl = readimage(pxds,perm(imNum));
+imIn = [trainDataPath,filesep,'trainingImage',filesep,'20130929_112106_B314_00408CEBCECB_01_rod13_f000005.png'];
+lbIn = [trainDataPath,filesep,'trainingLabel',filesep,'20130929_112106_B314_00408CEBCECB_01_rod13_f000005.png'];
+% $$$ [~,imNum]= ismember(imIn,imds.Files);
+img = imread(imIn);
+lbl = imread(lbIn);
 lbl0 = semanticseg(img,imgNet);
 act  = activations(imgNet,img,'softmax');
 A = labeloverlay(img,lbl);
@@ -88,8 +102,27 @@ imshow(A)
 title('Pixel Network')
 subplot(1,2,2)
 imshow(B)
-hold on, contour(act(:,:,3),[0.85 0.85],'r')
+hold on, contour(act(:,:,3),[0.5 0.5],'r')
 title('Image Network')
 %
 %
-save('../mat_data/imgNet_v8.mat','imgNet')
+save('../mat_data/imgNet_v9.mat','imgNet')
+
+function dataOut = augmentImageData(dataIn)
+    dataOut = dataIn;
+    img = dataIn{1};
+    mask = dataIn{2};
+    
+    tform = randomAffine2d( ...
+        Rotation=[-10 10], ...
+        XTranslation=[-15 15], ...
+        YTranslation=[-15 15], ...
+        YReflection=true, ...
+        XReflection=false);
+    
+    rout = affineOutputView(size(img), tform, BoundsStyle="CenterOutput");
+    
+    % Bilinear interpolation for image, nearest-neighbor for mask
+    dataOut{1} = imwarp(img, tform, OutputView=rout);
+    dataOut{2} = imwarp(mask, tform, "nearest", OutputView=rout);
+end
