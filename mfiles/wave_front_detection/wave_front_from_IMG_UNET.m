@@ -24,7 +24,7 @@ dy = y(2)-y(1);
 [xx,yy]    = meshgrid(x,y);
 %
 % CNN    = load('../../mat_data/imgNet_v8.mat');
-UNET  = load('../../mat_data/imgUnet_v0.mat');
+UNET  = load('../../mat_data/imgUnet_v0.mat'); % v0 is the original one, change path later to where im running data from
 imgNet = UNET.imgUnet;
 inSize = imgNet.Layers(1).InputSize;
 nNy = inSize(1);

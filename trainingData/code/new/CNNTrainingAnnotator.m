@@ -72,6 +72,11 @@ classdef CNNTrainingAnnotator < handle
 
     methods (Access = public)
         function app = CNNTrainingAnnotator()
+
+            % Add dir to path to access function (was getting error before) ~ prez 11/11/26
+            projectDir = '/Users/prezleystrait/git/waveIMG';
+            addpath(genpath(projectDir));
+            
             createComponents(app);
             restorePreferences(app);
             cameraIDChanged(app);

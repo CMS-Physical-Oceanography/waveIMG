@@ -1,0 +1,19 @@
+CNN Training Annotation Log
+Created: 11-Nov-2026 17:49:52
+Source video: /Volumes/RODSEX Video/RSEX18MP4/RSEX18_NorthTower_20180920_1000.mp4
+Frame numbers: [49 50 51]
+Pseudo-RGB image: /Users/prezleystrait/git/waveIMG/trainingData/trainingImage/RSEX18_NorthTower_20180920_1000_top18_f000050.png
+Binary label: /Users/prezleystrait/git/waveIMG/trainingData/trainingLabel/RSEX18_NorthTower_20180920_1000_top18_f000050.png
+Foreground pixels: 4203
+Regions: 11
+  Region 1: add, 182 vertices, mask pixels after op=77498
+  Region 2: add, 837 vertices, mask pixels after op=77498
+  Region 3: add, 361 vertices, mask pixels after op=77498
+  Region 4: add, 601 vertices, mask pixels after op=77498
+  Region 5: add, 189 vertices, mask pixels after op=77498
+  Region 6: add, 169 vertices, mask pixels after op=77498
+  Region 7: add, 638 vertices, mask pixels after op=77498
+  Region 8: add, 239 vertices, mask pixels after op=77499
+  Region 9: add, 161 vertices, mask pixels after op=77499
+  Region 10: add, 148 vertices, mask pixels after op=77499
+  Region 11: add, 198 vertices, mask pixels after op=77499
