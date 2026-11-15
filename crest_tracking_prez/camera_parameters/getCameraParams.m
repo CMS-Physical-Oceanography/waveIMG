@@ -14,6 +14,8 @@ function [icp, beta0, descriptionStr] = getCameraParams(ID)
 %          flags are currently....
 %          'top21' = DUNEX2021 tower optical camera to the north
 %          'bot21' = DUNEX2021 tower optical camera to the south
+%          'top22' = BiasX tower optical camera to the north
+%          'bot22' = BiasX tower optical camera to the south
 %          'dji_0366' = DUNEX2019 drone camera for video DJI_0366.mov
 %          'dji_0367' = DUNEX2019 drone camera for video DJI_0367.mov
 %          'gopro6084' = RSEX2018 drone camera for video GOPR6084.mp4
@@ -106,7 +108,66 @@ function [icp, beta0, descriptionStr] = getCameraParams(ID)
         descriptionStr = 'Bottom Optical Camera From The FRF Tower During DUNEX2021';
         
         
+    elseif strcmp(ID, 'top22')
+        % BiasX2022 North Camera:
+        % Camera with 12mm lens
+        beta0 = [32.459 582.58 43.427 67.71 0.277 36.411];
         
+        icp.Model = 'Genie Nano C2590';
+        icp.SN = '';
+        icp.Experiment = 'BiasX 2022';
+        icp.PixelFormat = 'Bayer';
+        icp.BitDepth = 10;
+        icp.FrameRate = 2;
+        icp.NU = 2592;
+        icp.NV = 2048;
+        icp.c0U = 1337.208393474765217;
+        icp.c0V = 1059.878083095105012;
+        icp.fx = 2653.882001234770087;
+        icp.fy = 2658.190566786691306;
+        icp.d1 = -0.085466772171719;
+        icp.d2 = 0.188264672785978;
+        icp.d3 = 0.0;
+        icp.t1 = -0.000819683056517;
+        icp.t2 = 0.001142725113713;
+        icp.ac = 0.0;
+        
+        icp = makeRadialDistortion(icp);
+        icp = makeTangentialDistortion(icp);
+        
+        descriptionStr = 'North Optical Camera From The FRF Tower During BiasX 2022';
+        
+
+    elseif strcmp(ID, 'bot22')
+        % BiasX2022 South Camera:
+        % Camera with 8mm lens
+        beta0 = [32.487 584.06 43.009 62.61 0.2753 87.273];
+        
+        icp.Model = 'Genie Nano C2590';
+        icp.SN = '';
+        icp.Experiment = 'BiasX 2022';
+        icp.PixelFormat = 'Bayer';
+        icp.BitDepth = 10;
+        icp.FrameRate = 2;
+        icp.NU = 2592;
+        icp.NV = 2048;
+        icp.c0U = 1341.587503796318515;
+        icp.c0V = 1080.514509189035380;
+        icp.fx = 1785.712304090393900;
+        icp.fy = 1788.485531544519517;
+        icp.d1 = -0.089970644306373;
+        icp.d2 = 0.086702887546380;
+        icp.d3 = 0.0;
+        icp.t1 = 0.002387380185434;
+        icp.t2 = 0.004183703005879;
+        icp.ac = 0.0;
+        
+        icp = makeRadialDistortion(icp);
+        icp = makeTangentialDistortion(icp);
+        
+        descriptionStr = 'South Optical Camera From The FRF Tower During BiasX 2022';
+        
+
     elseif strcmp(ID, 'dji_0366')
         % DJI Zenmuse X5s
         % for flight with video DJI_0366.mov

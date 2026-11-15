@@ -14,18 +14,18 @@
 %  Section 10: breaker index vs roller angle (all sensors).
 
 %% USER INPUT -- date/time + settings
-dateTag  = '1001';    % MMDD                       % must match available pressure data...
-hourStr  = '1100';    % HHMM
+dateTag  = '1002';    % MMDD                       % must match available pressure data...
+hourStr  = '1200';    % HHMM
 year_str = '2013';
 
 bin_size  = 5;        % m  (same as PIV_correction.m)
 min_c_pts = 5;       % min video celerity points per bin (same as PIV_correction.m)
 fs        = 2;        % pressure sampling freq [Hz]
-tMax      = Inf;      % [s] analyze first tMax seconds of the pressure record
+tMax      = 1800;      % [s] analyze first tMax seconds of the pressure record
 g         = 9.81;     % [m/s^2]
 
 % breaking-wave criterion
-gammaMin  = 0.35;     % keep only waves with gamma = H/h > gammaMin
+gammaMin  = 0.01;     % keep only waves with gamma = H/h > gammaMin
 
 % zero-up-crossing wave screening
 wp.minPeriod          = 3;      % [s] min zero-upcrossing wave period (drops short, high-frequency waves)
@@ -128,6 +128,7 @@ sWaveT   = cell(nS,1);                  % time of each breaking wave's front [s]
 sWaveAng = cell(nS,1);                  % spatial roller angle of each breaking wave [deg]
 sWaveH   = cell(nS,1);                  % zero-up-crossing wave height of each breaking wave [m]
 sWaveGam = cell(nS,1);                  % breaker index gamma = H/h of each breaking wave [-]
+sWaveDt = cell(nS,1);
 
 for s = 1:nS
     ci = discretize(sensorX(s), x_edges);
@@ -305,8 +306,41 @@ if ~isempty(allGam)
     ylim([0 20])
 end
 
+
+
+
+
+%% extract crest width, W    *** NEW 11/12/26
+
+% 11) trough-to-crest horizontal distance (along x), breaking waves, all used sensors
+% dx = c_bin * dt, with dt = trough->crest time and c_bin = mean video celerity of the sensor's bin
+allDx = [];  allDxS = [];
+for s = find(sUsed)'
+    dxs   = sCbin(s) .* sWaveDt{s};            % [m] one value per breaking wave
+    allDx = [allDx; dxs];
+    allDxS = [allDxS; repmat(sensorID(s), numel(dxs), 1)]; %#ok<AGROW>  % sensor ID per wave (for later)
+end
+
+dxMean = mean(allDx);
+dxStd  = std(allDx);
+fprintf('\nTrough-to-crest horizontal distance (%d breaking waves, %s):\n', numel(allDx), dateTimeLabel);
+fprintf('  mean = %.2f m,  std = %.2f m  (median = %.2f m)\n', dxMean, dxStd, median(allDx));
+
+figure; hold on
+histogram(allDx, 'BinWidth', 0.5, 'FaceColor', [0.2 0.45 0.75], 'EdgeColor', 'w');
+xline(dxMean, 'k--', sprintf('mean = %.2f m', dxMean), 'LineWidth', 1.5, ...
+    'LabelHorizontalAlignment','left', 'LabelVerticalAlignment','top');
+xline(dxMean + [-1 1]*dxStd, 'k:', 'LineWidth', 1);   % ±1 std
+xlabel('Trough-to-crest horizontal distance \Deltax [m]'); ylabel('Count')
+title(sprintf('Trough-to-crest distance, breaking waves (\\gamma > %.2f) - %s\nmean = %.2f m, std = %.2f m, N = %d', ...
+    gammaMin, dateTimeLabel, dxMean, dxStd, numel(allDx)))
+grid on; box 
+
+
+
+
 %% local function -- zero-up-crossing wave detection + 20-80% front-face slope
-function [waveSlope, waveTime, waveH] = extractWaveSlopes(eta, fs, wp)
+function [waveSlope, waveTime, waveH, waveDt] = extractWaveSlopes(eta, fs, wp)
     eta = eta(:);
     t = (0:length(eta)-1)'/fs;
 
@@ -355,8 +389,9 @@ function [waveSlope, waveTime, waveH] = extractWaveSlopes(eta, fs, wp)
         t20 = interp1(e(k20:k20+1), tv(k20:k20+1), lo);
         t80 = interp1(e(k80-1:k80), tv(k80-1:k80), hi);
 
-        waveSlope(end+1,1) = (hi - lo) / (t80 - t20); %#ok<AGROW>   % [m/s]
-        waveTime(end+1,1)  = (t20 + t80) / 2;         %#ok<AGROW>   % [s] midpoint of the front
-        waveH(end+1,1)     = H;                       %#ok<AGROW>   % [m] zup wave height
+        waveSlope(end+1,1) = (hi - lo) / (t80 - t20)   % [m/s]
+        waveTime(end+1,1)  = (t20 + t80) / 2;          % [s] midpoint of the front
+        waveH(end+1,1)     = H;                        % [m] zup wave height
+        waveDt(end+1,1)    = dt;                       % [s] trough->crest time
     end
 end

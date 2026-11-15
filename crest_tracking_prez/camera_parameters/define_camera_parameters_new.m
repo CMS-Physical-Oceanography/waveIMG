@@ -39,10 +39,22 @@ switch ID
 
     case 'bot21'
         info.vid_dir       = 'DunexMP4';
-        info.vid_name_root = 'Dunex_SouthTower';   % TODO: confirm against your files
-        info.X_min = 75;     info.X_max = 250;
+        info.vid_name_root = 'Dunex_SouthTower';  
+        info.X_min = 75;     info.X_max = 300;
         info.Y_min = 500;    info.Y_max = 750;
 
+
+    case 'top22'    % BiasX 2022 north camera (12 mm lens)
+        info.vid_dir       = 'BiasXMP4';
+        info.vid_name_root = 'BiasX_NorthTower';
+        info.X_min = 40;     info.X_max = 250;
+        info.Y_min = 600;    info.Y_max = 1100;
+
+    case 'bot22'    % BiasX 2022 south camera (8 mm lens)
+        info.vid_dir       = 'BiasXMP4';
+        info.vid_name_root = 'BiasX_SouthTower';   
+        info.X_min = 70;     info.X_max = 300;
+        info.Y_min = 450;    info.Y_max = 750;
 
     case 'top18'    % RSEX2018 north-looking camera (12 mm lens)
         info.vid_dir       = 'RSEX18MP4';
@@ -55,6 +67,7 @@ switch ID
         info.vid_name_root = 'RSEX18_SouthTower';   % GUESS: confirm against the files
         info.X_min = 50;     info.X_max = 300;
         info.Y_min = 500;    info.Y_max = 850;
+
 
     case 'rod13'
         info.vid_dir       = '';                   % hour folders sit at the drive root

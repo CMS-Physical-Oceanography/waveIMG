@@ -12,21 +12,21 @@ matDataDir = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/
 if ~exist(matDataDir,'dir'); mkdir(matDataDir); end
 
 % INPUT
-year = 2018;
-tower = 'north'; % 2021: 'north' or 'south'
+year = 2013;
+tower = 'south'; % 2021: 'north' or 'south'
 runTag    = '';    % set to '' for real runs (prevents overwriting saved outputs), or '_test'
-maxFrames = 300;        % used for test runs; set to 'Inf' for full videos
+maxFrames = Inf;        % used for test runs; set to 'Inf' for full videos
 
-enhance_image = true;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
-foamFrame = 5;    % frame used to set the foam/water threshold for glare at start, if n/a set = 1
+enhance_image = false;    % INPUT: true = water/foam contrast enhancement (Carini et al.)
+foamFrame = 1;    % frame used to set the foam/water threshold for glare at start, if n/a set = 1
 
 if enhance_image; runTag = [runTag '_enh']; end    % enhanced runs get their own file names
 
 switch year
     case 2013 
         IDs      = {'rod13'};
-        dateTag  = '20131022';        % folder prefix, yyyymmdd
-        hourList = 1600;              % -> 20131024_12
+        dateTag  = '20131020';        % folder prefix, yyyymmdd
+        hourList = 0900;              % -> 20131024_12
         numFiles = 12;                 % each vid is 5 mins, so set to 12 for full hour run
         startIdx = 1;
 
@@ -37,7 +37,7 @@ switch year
             case 'both';  IDs = {'top18','bot18'};
             otherwise;    error('tower must be ''north'', ''south'', or ''both'' (got ''%s'').', tower);
         end
-        dateTag  = '20180920_1000';    % prefix, yyyymmdd_hhmm 
+        dateTag  = '20180829_1300';    % prefix, yyyymmdd_hhmm 
         hourList = 0; numFiles = 1; startIdx = 1;    
 
     case 2021 % dunex
@@ -47,8 +47,18 @@ switch year
             case 'both';  IDs = {'top21','bot21'};
             otherwise;    error('tower must be ''north'', ''south'', or ''both'' (got ''%s'').', tower);
         end
-        dateTag  = '20210908_0800';    % prefix, yyyymmdd_hhmm
+        dateTag  = '20210904_1600';    % prefix, yyyymmdd_hhmm
         hourList = 0; numFiles = 1; startIdx = 1;      
+       
+    case 2022 % biasx
+        switch lower(tower)
+            case 'north'; IDs = {'top22'};
+            case 'south'; IDs = {'bot22'};
+            case 'both';  IDs = {'top22','bot22'};
+            otherwise;    error('tower must be ''north'', ''south'', or ''both'' (got ''%s'').', tower);
+        end
+        dateTag  = '20221008_1030';    % prefix, yyyymmdd_hhmm
+        hourList = 0; numFiles = 1; startIdx = 1;
 end
 
 for year_ID = 1:length(IDs)
@@ -186,7 +196,32 @@ rectified_frames = cell(1, numberVideoFrames);
 crest_summary    = cell(1, numberVideoFrames);
 totalFramesNeeded = min(numberVideoFrames + 2, maxFrames);
 
-tRun = tic; % new for timing % %% %% % % % %
+
+% land mask: land = region that never changes (motion-based, lighting-independent) 11/13
+rg = @(im) interp2(U,V,double(rgb2gray(im)),Uint,Vint,'linear',nan);
+motion = zeros(size(xx));  n = zeros(size(xx));
+for t = linspace(0, max(vid.Duration-1.5,0), 30)
+    vid.CurrentTime = t;      A = rg(readFrame(vid));
+    vid.CurrentTime = t+0.5;  B = rg(readFrame(vid));
+    d  = abs(B-A) ./ (A+B+1);  ok = ~isnan(d);
+    motion(ok) = motion(ok) + d(ok);  n(ok) = n(ok) + 1;
+end
+valid = n > 0;
+lm    = log10(imgaussfilt(motion ./ max(n,1), 2) + 1e-4);
+land  = imclose(valid & lm <= multithresh(lm(valid),1), strel('disk',5));
+
+% keep only the landmass (most shoreward big static blob), then take its offshore edge per row
+cc  = bwconncomp(land);
+st  = regionprops(cc, 'Area', 'Centroid');
+big = find([st.Area] > 0.01*nnz(valid));
+[~, ib] = min(arrayfun(@(i) st(i).Centroid(1), big));
+land = false(size(land));  land(cc.PixelIdxList{big(ib)}) = true;
+Nx = size(land,2);
+lastLand  = round(movmedian(max(land .* (1:Nx), [], 2), 15));
+waterMask = valid & ((1:Nx) > lastLand + 3);        % 3-cell buffer offshore of land 11/13
+
+
+tRun = tic; % new for timing 
 
 vid.CurrentTime = 0;
 frameTimes = [];
@@ -204,7 +239,7 @@ while hasFrame(vid) && f < totalFramesNeeded
 
     if enhance_image
         if f == foamFrame
-            foam_th = water_foam_threshold(rect(~isnan(rect)), 0);
+            foam_th = water_foam_threshold(rect(~isnan(rect)), 0);            
             fprintf('  foam/water threshold (frame %d): %.1f\n', f, foam_th);
         end
         if exist('foam_th','var')
@@ -230,15 +265,15 @@ while hasFrame(vid) && f < totalFramesNeeded
     [rclog, rcsummary] = bore_front_search_length(prob', info.Ny, info.Nx, 1, Pnon, X, Y);
     crest_summary{k} = rcsummary;
 
-    W_sub = [];
-    for ll = 1:length(rclog)
-        W_sub = cat(1, W_sub, rclog{ll}(:,5));
+    % gather all crest points [row col x y width], then keep only those seaward of the shoreline
+    pts = cat(1, rclog{:});
+    if isempty(pts)
+        X_sub = []; Y_sub = []; W_sub = [];
+    else
+        inW   = interp2(X, Y, double(waterMask), pts(:,3), pts(:,4), 'nearest', 0) > 0;
+        X_sub = pts(inW,3);  Y_sub = pts(inW,4);  W_sub = pts(inW,5);
     end
-    X_sub = []; Y_sub = [];
-    for ll = 1:length(rclog)
-        X_sub = cat(1, X_sub, rclog{ll}(:,3));
-        Y_sub = cat(1, Y_sub, rclog{ll}(:,4));
-    end
+    
     X_front_store{k} = X_sub;
     Y_front_store{k} = Y_sub;
     W_front_store{k} = W_sub;
@@ -668,6 +703,8 @@ switch ID
     case 'bot21';  towerTag = 'SouthTower21';
     case 'top18';  towerTag = 'NorthTower18';
     case 'bot18';  towerTag = 'SouthTower18';
+    case 'top22';  towerTag = 'NorthTower22';
+    case 'bot22';  towerTag = 'SouthTower22';
     otherwise;     towerTag = ID;
 end
 
@@ -760,9 +797,10 @@ for kk = 1:numberVideoFrames
 
     cla(axAnim);
     imagesc(axAnim, X, Y, rectified_frames{kk});
+    hold(axAnim, 'on');
+    contour(axAnim, X, Y, double(waterMask), [.5 .5], 'c', 'LineWidth', 1.5);
     set(axAnim, 'YDir', 'normal');          % Y increases upward
     colormap(axAnim, gray);
-    hold(axAnim, 'on');
     % plot(axAnim, x_q22, y_q22, 'rp', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
 
     fr = animFronts{kk};
