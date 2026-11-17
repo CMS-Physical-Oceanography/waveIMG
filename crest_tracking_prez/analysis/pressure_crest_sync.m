@@ -4,8 +4,8 @@
 
 %% USER INPUT
 year_str = '2013';
-runDate  = '20131001';       % yyyymmdd of the video run
-hourStr  = '1100';           % hhmm of the video run
+runDate  = '20131002';       % yyyymmdd of the video run
+hourStr  = '1200';           % hhmm of the video run
 camera   = 'rod13';          % prefix of the saved .mat ('rod13', 'NorthTower21', 'SouthTower18', ...)
 
 dy      = 2;      % m, alongshore half-width of the strip around each sensor
@@ -18,10 +18,15 @@ minBore = 10;     % min bores at a sensor needed to trust its lag estimate (else
 tol     = 2;      % s, max |bore time - pressure crest time| to call it a match
 fsP     = 2;      % Hz, pressure sample rate
 
+
+animSensor = 22;        % sensor ID to follow (e.g. 22 -> p22) for animation section
+
+
 %% paths
 dataRoot   = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_Eddies';
 matDir     = fullfile(dataRoot, 'mat_data');
-insituRoot = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/SURF-AI field data';
+insituRoot = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/SURF-AI field data'];
+% need to move in-situ data to shared onedrive ^ ^ ^
 
 runKey = [runDate '_' hourStr];
 L = dir(fullfile(matDir, [camera '_' runKey '*.mat']));
@@ -152,9 +157,8 @@ end
 % title(tl, sprintf('%s  %s %s   pressure (> %d s removed) + tracked bores', camera, runDate, hourStr, Tcut))
 
 %% ANIMATION: tracked crests on the map + one sensor's pressure record, side by side
-animSensor = 22;        % sensor ID to follow (e.g. 22 -> p22)
-animStart  = 0;         % s after the start of the video
-animDur    = 5;       % s of video to animate
+animStart  = 1000;         % s after the start of the video
+animDur    = 1200;       % s of video to animate
 trail      = 1;         % s, crest pts from the last 'trail' seconds stay visible (fading tail)
 presWin    = [-20 30];  % s, pressure window shown around "now"
 saveVideo  = false;      % true = also write an mp4 next to the saved results

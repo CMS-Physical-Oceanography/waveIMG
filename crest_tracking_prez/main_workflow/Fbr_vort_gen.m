@@ -2,12 +2,12 @@
 
 %% USER INPUT
 year_str   = '2013';
-runDate    = '20130925';        % yyyymmdd of the video run
-hourStr    = '1600';            % hhmm
+runDate    = '20131002';        % yyyymmdd of the video run
+hourStr    = '1200';            % hhmm
 camera     = 'rod13';      % 2021: 'NorthTower21' | 'SouthTower21'
                                 % 2013: 'rod13'  (prefix of the saved .mat)
 
-ens_surveyDate = '20130925';   % yyyymmdd of the bathy survey; for ensemble section
+ens_surveyDate = '20131002';   % yyyymmdd of the bathy survey; for ensemble section
 
 
 data_source = 'raw';            % 'raw' or 'piv'
@@ -278,7 +278,7 @@ end
 
 %% Fbr vectors over single frame ...old but need b/c it determines unique frame for diagnostic plots
 
-frame_to_plot = 50; % frame of last 5 mins to inspect/diagnose, og is 25 for 2013 good crest
+frame_to_plot = 35; % frame of last 5 mins to inspect/diagnose, og is 25 for 2013 good crest
 
 % rectified_frames{k} was built from frameTimes(k+1) of the LAST video file processed that hour, so reconstruct 
 % that same timestamp vector here to guarantee the background img and the cel/Fbr points line up.
@@ -747,39 +747,41 @@ fprintf('  h: %+6.0f %% to %+6.0f %%   (span %.0f %% of reference)\n', min(rel(o
 
 
 
-%% ===== WAVE-BY-WAVE ENSEMBLE (v3): along-crest median filtering, survey depth, frame diagnostic =====
+%% ===== WAVE-BY-WAVE ENSEMBLE (v3): padded crests, along-crest median filtering, survey depth, frame diagnostic =====
 % Reuses from earlier sections: x_pts, y_pts, c_pts, crest_width_pts, Fbr_dir_pts, frame_ID, tide,
 % T_mean, theta_r, g, h_min, crest_width_pts_all, w_by_frame, key2col, up_c, p_by_frame_c,
 % max_crest_link_dist, max_match_dist, crest_pad_dist, min_curl_dist, dateTimeLabel, trace_crest_paths,
 % h_source / h_survey_pts (survey block above); for the background image: unique_frames, frame_times_abs, S.
 %
-%  1. Fbr is RECOMPUTED per crest from along-crest median-filtered c and W (inputs, not the output).
-%     ens_med_len = 0 gives the unfiltered result; the unfiltered intCurlAbs_unpad is always computed too.
-%  2. Depth h from the survey (water depth = tide - NAVD88 bed elevation) or from c^2/g ('remote').
-%  3. Frame diagnostic: normalized crest coordinate, Fbr vectors and profiles for the crests in one frame.
+%  1. Every crest is PADDED with an Fbr = 0 point one crest_pad_dist beyond its first and last measured
+%     point (same definition as the hourly curl section). All per-crest quantities use the padded crest.
+%  2. Fbr is RECOMPUTED per crest from along-crest median-filtered c and W (inputs, not the output).
+%     ens_med_len = 0 turns the filter off.
+%  3. Depth h from the survey (water depth = tide - NAVD88 bed elevation) or from c^2/g ('remote').
+%  4. Frame diagnostic: normalized crest coordinate, Fbr vectors and profiles for the crests in one frame.
 %
-% L = length between first and last real point, zeta = s/L, intCurl*_{unpad,pad}, meanAbsCurl_*, padFrac.
+% L = padded crest length (pad to pad), zeta = s/L (0 and 1 are the pad points), intCurl*, meanAbsCurl.
 
 % ensemble USER INPUT
 ens_min_pts  = 5;      % min matched Fbr points for a crest to count as a wave
-ens_min_L    = 3;      % [m] min real-point crest length
+ens_min_L    = 3;      % [m] min along-crest span of the measured points (before padding)
 ens_nZ       = 51;     % points on the common zeta grid (50 intervals, dzeta = 0.02)
 ens_stride   = 1;      % use every Nth frame (consecutive frames re-sample the same physical wave)
 ens_max_plot = 150;    % max individual profiles drawn faintly in the profile figure
-ens_scatter_version = 'pad';   % 'unpad' or 'pad' for the scatterplots
 
 % --- noise reduction (along-crest median filter on the INPUTS c and W) ---
-ens_med_len   = 3;     % [m] median window along the crest (~spacing of points is ~1 m); 0 = no filtering
+ens_med_len   = 0;     % [m] median window along the crest (~spacing of points is ~1 m); 0 = no filtering
 ens_c_perwave = false; % true: replace c by one median value per crest (per-wave-celerity test)
 
 % --- frame diagnostic ---
-ens_diag_frame_idx  = 25;     % index into unique_frames (last video file), 25 is good one for 10/02/2013, 1200
+ens_diag_frame_idx  = 30;     % index into unique_frames (last video file), 25 is good one for 10/02/2013, 1200
 ens_diag_max_crests = 8;      % draw only the N longest crests of that frame
 ens_diag_vec_scale  = 6;      % [m of arrow per m s^-2 of Fbr]
 ens_diag_vec_stride = 2;      % draw every Nth vector so the crest stays readable
 
 ens_min_pts = max(ens_min_pts, 2);
 zgrid = linspace(0, 1, ens_nZ); % grid for normalizing alongcrest
+ens_filter_on = ens_med_len > 0 || ens_c_perwave;
 
 % locate given frame for the diagnostic
 diag_fnum = [];
@@ -789,22 +791,20 @@ if exist('unique_frames','var') && ~isempty(unique_frames)
 end
 if isempty(diag_fnum); diag_fnum = min(ens_diag_frame_idx, numel(up_c)); end
 
-%% split frames into individual crests, filter, recompute Fbr, normalize
+% split frames into individual crests, filter, recompute Fbr, pad, normalize
 t_ens = tic;
 
 dt_fr = median(diff(up_c));
 fidx  = round((up_c - up_c(1)) / dt_fr);          % frame counter (robust to missing frames)
 Fcoef = 0.9*g/T_mean * 0.11*tan(theta_r)*sec(theta_r);   % Fbr = Fcoef * W^2 / (c*h)
 
-ens_L = []; ens_Lpad = []; ens_npts = [];
+ens_L = []; ens_npts = [];
 ens_Fmean = []; ens_Fstd = []; ens_Fmax = []; ens_intF = [];
-ens_intCurlPos_unpad = []; ens_intCurlNeg_unpad = [];
-ens_intCurlPos_pad   = []; ens_intCurlNeg_pad   = [];
-ens_intCurlAbs_unpad_raw = [];                    % same quantity from UNFILTERED c and W
+ens_intCurlPos = []; ens_intCurlNeg = [];
 ens_xc = []; ens_yc = []; ens_t = NaT(0,1);
 Fprof = {}; Cprof = {};
-D = struct('x',{},'y',{},'Fraw',{},'F',{},'dir',{},'zeta',{},'L',{},'curl',{},'zmid',{},'id',{},'xend',{},'yend',{});
-map_pts = {}; map_seg_pad = {}; map_seg_unp = {};     % point/segment storage for the spatial maps
+D = struct('x',{},'y',{},'Fraw',{},'F',{},'dir',{},'zeta',{},'L',{},'curl',{},'zmid',{},'id',{});
+map_pts = {}; map_seg = {};     % point/segment storage for the spatial maps
 
 for fnum = 1:numel(up_c)
     isDiag = (fnum == diag_fnum);
@@ -844,16 +844,16 @@ for fnum = 1:numel(up_c)
         cm = cm(ord);
 
         cxs = fx(cm); cys = fy(cm); cc = fc(cm); ww = fW(cm); dd = fdir(cm);
-        s_r = [0; cumsum(hypot(diff(cxs), diff(cys)))] + (0:numel(cxs)-1)'*1e-9;   % strictly increasing
+        s_m = [0; cumsum(hypot(diff(cxs), diff(cys)))] + (0:numel(cxs)-1)'*1e-9;   % strictly increasing
 
         % ---- along-crest median filter on c and W (window in metres) ----
         cc_f = cc; ww_f = ww;
         if ens_med_len > 0
-            cc_f = movmedian(cc, ens_med_len, 'SamplePoints', s_r);
-            ww_f = movmedian(ww, ens_med_len, 'SamplePoints', s_r);
+            cc_f = movmedian(cc, ens_med_len, 'SamplePoints', s_m);
+            ww_f = movmedian(ww, ens_med_len, 'SamplePoints', s_m);
         end
-        if ens_c_perwave 
-            cc_f = repmat(median(cc_f), size(cc_f)); 
+        if ens_c_perwave
+            cc_f = repmat(median(cc_f), size(cc_f));
         end
 
         % ---- depth ----
@@ -864,36 +864,42 @@ for fnum = 1:numel(up_c)
         end
 
         F_raw = Fcoef * ww.^2   ./ (cc   .* hh);           % unfiltered
-        F_f   = Fcoef * ww_f.^2 ./ (cc_f .* hh_f);         % filtered (identical to F_raw when ens_med_len = 0)
+        F_f   = Fcoef * ww_f.^2 ./ (cc_f .* hh_f);         % filtered (identical to F_raw when the filter is off)
         good  = isfinite(F_raw) & isfinite(F_f) & cc > 0 & cc_f > 0 & ww > 0 & hh > h_min & hh_f > h_min;
         if nnz(good) < ens_min_pts; continue; end
         cxs = cxs(good); cys = cys(good); F_raw = F_raw(good); F_f = F_f(good); dd = dd(good);
 
-        % ---- along-crest coordinate over the real points only ----
-        ds_r = hypot(diff(cxs), diff(cys));
-        s_r  = [0; cumsum(ds_r)];
-        L_r  = s_r(end);
-        if L_r < ens_min_L; continue; end
-        L_p    = L_r + 2*crest_pad_dist;
-        zeta_r = s_r / L_r;
+        if sum(hypot(diff(cxs), diff(cys))) < ens_min_L; continue; end   % span of the measured points
 
-        dF_u   = diff(F_f);                               % unpadded steps
-        dF_p   = [F_f(1); dF_u; -F_f(end)];               % padded steps (Fbr = 0 pads)
-        dF_raw = diff(F_raw);
+        % ---- pad the crest: Fbr = 0 point one crest_pad_dist beyond each end ----
+        e1 = [cxs(1)-cxs(2),       cys(1)-cys(2)];        e1 = e1 / max(norm(e1), eps);
+        e2 = [cxs(end)-cxs(end-1), cys(end)-cys(end-1)];  e2 = e2 / max(norm(e2), eps);
+        xp     = [cxs(1)+crest_pad_dist*e1(1); cxs; cxs(end)+crest_pad_dist*e2(1)];
+        yp     = [cys(1)+crest_pad_dist*e1(2); cys; cys(end)+crest_pad_dist*e2(2)];
+        Fp     = [0; F_f;   0];
+        Fp_raw = [0; F_raw; 0];
 
-        [zu, iu] = unique(zeta_r);
-        Fz    = interp1(zu, F_f(iu), zgrid, 'linear');
+        % ---- along-crest coordinate over the padded crest ----
+        ds   = hypot(diff(xp), diff(yp));
+        s    = [0; cumsum(ds)];
+        L    = s(end);
+        zeta = s / L;
+
+        dF   = diff(Fp);                                  % along-crest Fbr steps, pad to pad
+        curl = dF ./ ds;                                  % same definition as the hourly curl section
+        curl(ds < min_curl_dist) = NaN;
+        zeta_md = 0.5*(zeta(1:end-1) + zeta(2:end));
+
+        [zu, iu] = unique(zeta);
+        Fz    = interp1(zu, Fp(iu), zgrid, 'linear');
         Fmean = trapz(zgrid, Fz);
         Fstd  = sqrt(trapz(zgrid, (Fz - Fmean).^2));
 
-        curl_u  = dF_u ./ ds_r;
-        curl_u(ds_r < min_curl_dist) = NaN;
-        ok      = ~isnan(curl_u);
-        zeta_md = 0.5*(zeta_r(1:end-1) + zeta_r(2:end));
+        ok = ~isnan(curl);
         Cz = nan(1, ens_nZ);
         if nnz(ok) >= 2
             [zm, im] = unique(zeta_md(ok));
-            cvv = curl_u(ok);  cvv = cvv(im);
+            cvv = curl(ok);  cvv = cvv(im);
             if numel(zm) >= 2
                 Cz = interp1(zm, cvv, zgrid, 'linear', NaN);
                 Cz = fillmissing(Cz, 'nearest');
@@ -901,45 +907,29 @@ for fnum = 1:numel(up_c)
         end
 
         if useEns
-            Fprof{end+1,1} = Fz;                                  
-            Cprof{end+1,1} = Cz;                                    
-            ens_L(end+1,1)      = L_r;                             
-            ens_Lpad(end+1,1)   = L_p;                            
-            ens_npts(end+1,1)   = numel(cxs);                       
-            ens_Fmean(end+1,1)  = Fmean;                            
-            ens_Fstd(end+1,1)   = Fstd;                             
-            ens_Fmax(end+1,1)   = max(F_f);                         
-            ens_intF(end+1,1)   = Fmean * L_r;                      
-            ens_intCurlPos_unpad(end+1,1) = sum(max(dF_u,0));       
-            ens_intCurlNeg_unpad(end+1,1) = sum(min(dF_u,0));       
-            ens_intCurlPos_pad(end+1,1)   = sum(max(dF_p,0));       
-            ens_intCurlNeg_pad(end+1,1)   = sum(min(dF_p,0));       
-            ens_intCurlAbs_unpad_raw(end+1,1) = sum(abs(dF_raw));   
-            ens_xc(end+1,1)     = mean(cxs);                        
-            ens_yc(end+1,1)     = mean(cys);                        
-            ens_t(end+1,1)      = t_frame;        
+            Fprof{end+1,1} = Fz;
+            Cprof{end+1,1} = Cz;
+            ens_L(end+1,1)          = L;
+            ens_npts(end+1,1)       = numel(cxs);
+            ens_Fmean(end+1,1)      = Fmean;
+            ens_Fstd(end+1,1)       = Fstd;
+            ens_Fmax(end+1,1)       = max(F_f);
+            ens_intF(end+1,1)       = Fmean * L;
+            ens_intCurlPos(end+1,1) = sum(max(dF,0));
+            ens_intCurlNeg(end+1,1) = sum(min(dF,0));
+            ens_xc(end+1,1)         = mean(cxs);
+            ens_yc(end+1,1)         = mean(cys);
+            ens_t(end+1,1)          = t_frame;
 
             % ---- point / segment storage for the spatial-map section ----
             cidx = numel(ens_L); % this crest's index in the ensemble arrays
-            e1 = [cxs(1)-cxs(2), cys(1)-cys(2)];                e1 = e1 / max(norm(e1), eps);
-            e2 = [cxs(end)-cxs(end-1), cys(end)-cys(end-1)];    e2 = e2 / max(norm(e2), eps);
-            xpd = [cxs(1)+crest_pad_dist*e1(1); cxs; cxs(end)+crest_pad_dist*e2(1)];
-            ypd = [cys(1)+crest_pad_dist*e1(2); cys; cys(end)+crest_pad_dist*e2(2)];
-            Fpd = [0; F_f; 0];
-            dsp = hypot(diff(xpd), diff(ypd));
-            curl_pd = diff(Fpd) ./ dsp;   curl_pd(dsp < min_curl_dist) = NaN;     % same definition as the hourly curl section
-            map_pts{end+1,1}     = [cxs, cys, F_f, F_raw, repmat(cidx, numel(cxs), 1)];                                        
-            map_seg_pad{end+1,1} = [(xpd(1:end-1)+xpd(2:end))/2, (ypd(1:end-1)+ypd(2:end))/2, curl_pd, repmat(cidx, numel(curl_pd), 1)];   
-            map_seg_unp{end+1,1} = [(cxs(1:end-1)+cxs(2:end))/2, (cys(1:end-1)+cys(2:end))/2, curl_u,  repmat(cidx, numel(curl_u), 1)];    
+            map_pts{end+1,1} = [cxs, cys, F_f, F_raw, repmat(cidx, numel(cxs), 1)];
+            map_seg{end+1,1} = [(xp(1:end-1)+xp(2:end))/2, (yp(1:end-1)+yp(2:end))/2, curl, repmat(cidx, numel(curl), 1)];
         end
 
         if isDiag                                          % keep everything needed to draw this crest
-            d1 = [cxs(1)-cxs(2),     cys(1)-cys(2)];      d1 = d1 / max(norm(d1), eps);
-            d2 = [cxs(end)-cxs(end-1), cys(end)-cys(end-1)]; d2 = d2 / max(norm(d2), eps);
-            D(end+1) = struct('x',cxs, 'y',cys, 'Fraw',F_raw, 'F',F_f, 'dir',dd, 'zeta',zeta_r, 'L',L_r, ...
-                'curl',curl_u, 'zmid',zeta_md, 'id',id, ...
-                'xend',[cxs(1)+crest_pad_dist*d1(1), cxs(end)+crest_pad_dist*d2(1)], ...
-                'yend',[cys(1)+crest_pad_dist*d1(2), cys(end)+crest_pad_dist*d2(2)]);     
+            D(end+1) = struct('x',xp, 'y',yp, 'Fraw',Fp_raw, 'F',Fp, 'dir',dd, 'zeta',zeta, 'L',L, ...
+                'curl',curl, 'zmid',zeta_md, 'id',id);
         end
     end
 end
@@ -951,15 +941,8 @@ nE   = size(Fmat, 1);
 Fshape = Fmat ./ ens_Fmean;        % amplitude-normalized shape, F / (crest-mean F)
 
 % derived per-crest forcing quantities
-intCurlAbs_unpad  = ens_intCurlPos_unpad - ens_intCurlNeg_unpad;
-intCurlAbs_pad    = ens_intCurlPos_pad   - ens_intCurlNeg_pad;
-intCurlNet_unpad  = ens_intCurlPos_unpad + ens_intCurlNeg_unpad;   % = F_last - F_first
-intCurlNet_pad    = ens_intCurlPos_pad   + ens_intCurlNeg_pad;     % = 0
-meanAbsCurl_unpad = intCurlAbs_unpad ./ ens_L;
-meanAbsCurl_pad   = intCurlAbs_pad   ./ ens_Lpad;
-meanAbsCurl_unpad_raw = ens_intCurlAbs_unpad_raw ./ ens_L;
-filterRatio       = intCurlAbs_unpad ./ ens_intCurlAbs_unpad_raw;  % filtered / unfiltered total forcing
-padFrac           = (intCurlAbs_pad - intCurlAbs_unpad) ./ intCurlAbs_pad;
+intCurlAbs  = ens_intCurlPos - ens_intCurlNeg;     % sum |dFbr| along the padded crest
+meanAbsCurl = intCurlAbs ./ ens_L;
 
 fprintf('Ensemble build: %d crest events from %d frames (stride %d) in %.1f s\n', ...
     nE, numel(up_c), ens_stride, toc(t_ens));
@@ -976,121 +959,94 @@ S_p16  = prctile(Fshape, 16, 1);      S_p84 = prctile(Fshape, 84, 1);
 st = @(v) [mean(v,'omitnan'), std(v,0,'omitnan'), median(v,'omitnan')];
 fprintf('\n===== WAVE-BY-WAVE ENSEMBLE (%s), N = %d crests =====\n', dateTimeLabel, nE)
 fprintf('%-42s %10s %10s %10s\n', '', 'mean', 'std', 'median')
-rows = {'Crest length L, real points [m]',              ens_L
+rows = {'Crest length L [m]',                           ens_L
         'Matched Fbr points per crest',                 ens_npts
         'Peak Fbr [m s^-2]',                            ens_Fmax
         'Crest-mean Fbr [m s^-2]',                      ens_Fmean
         'Along-crest std of Fbr [m s^-2]',              ens_Fstd
         'intF = int Fbr ds [m^2 s^-2]',                 ens_intF
-        'intCurlPos_unpad [m s^-2]',                    ens_intCurlPos_unpad
-        'intCurlNeg_unpad [m s^-2]',                    ens_intCurlNeg_unpad
-        'intCurlNet_unpad [m s^-2]',                    intCurlNet_unpad
-        'intCurlAbs_unpad [m s^-2]',                    intCurlAbs_unpad
-        'intCurlAbs_unpad, UNFILTERED c,W [m s^-2]',    ens_intCurlAbs_unpad_raw
-        'filtered / unfiltered intCurlAbs_unpad',       filterRatio
-        'meanAbsCurl_unpad [s^-2]',                     meanAbsCurl_unpad
-        'meanAbsCurl_unpad, UNFILTERED [s^-2]',         meanAbsCurl_unpad_raw
-        'intCurlPos_pad [m s^-2]',                      ens_intCurlPos_pad
-        'intCurlNeg_pad [m s^-2]',                      ens_intCurlNeg_pad
-        'intCurlNet_pad [m s^-2]',                      intCurlNet_pad
-        'intCurlAbs_pad [m s^-2]',                      intCurlAbs_pad
-        'meanAbsCurl_pad [s^-2]',                       meanAbsCurl_pad
-        'padFrac (pad share of intCurlAbs_pad)',        padFrac};
+        'intCurlPos [m s^-2]',                          ens_intCurlPos
+        'intCurlNeg [m s^-2]',                          ens_intCurlNeg
+        'intCurlAbs [m s^-2]',                          intCurlAbs
+        'meanAbsCurl [s^-2]',                           meanAbsCurl};
 for i = 1:size(rows,1)
     fprintf('%-42s %10.4f %10.4f %10.4f\n', rows{i,1}, st(rows{i,2}))
 end
 
-mac_set = struct('unpad', meanAbsCurl_unpad, 'pad', meanAbsCurl_pad);
-tot_set = struct('unpad', intCurlAbs_unpad,  'pad', intCurlAbs_pad);
 rr = @(a,b) [corr(a,b,'Rows','complete'), corr(a,b,'Type','Spearman','Rows','complete')];
 fprintf('\n-- Correlations [Pearson, Spearman] --\n')
-for v = {'unpad','pad'}
-    vv = v{1};
-    fprintf('  [%s]  Fmean vs meanAbsCurl: %5.2f %5.2f | L vs meanAbsCurl: %5.2f %5.2f | L vs intCurlAbs: %5.2f %5.2f | Fstd vs meanAbsCurl: %5.2f %5.2f\n', vv, ...
-        rr(ens_Fmean, mac_set.(vv)), rr(ens_L, mac_set.(vv)), rr(ens_L, tot_set.(vv)), rr(ens_Fstd, mac_set.(vv)))
-end
+fprintf('  Fmean vs meanAbsCurl: %5.2f %5.2f | L vs meanAbsCurl: %5.2f %5.2f | L vs intCurlAbs: %5.2f %5.2f | Fstd vs meanAbsCurl: %5.2f %5.2f\n', ...
+    rr(ens_Fmean, meanAbsCurl), rr(ens_L, meanAbsCurl), rr(ens_L, intCurlAbs), rr(ens_Fstd, meanAbsCurl))
 fprintf('NOTE: consecutive frames re-sample the same physical wave, so N overstates the number of\n')
 fprintf('independent events; use ens_stride to thin before quoting standard errors or p-values.\n')
 
-ENS = struct('zeta',zgrid, 'F',Fmat, 'curl',Cmat, 'Fshape',Fshape, 'L',ens_L, 'Lpad',ens_Lpad, 'npts',ens_npts, ...
+ENS = struct('zeta',zgrid, 'F',Fmat, 'curl',Cmat, 'Fshape',Fshape, 'L',ens_L, 'npts',ens_npts, ...
     'Fmean',ens_Fmean, 'Fstd',ens_Fstd, 'Fmax',ens_Fmax, 'intF',ens_intF, ...
-    'intCurlPos_unpad',ens_intCurlPos_unpad, 'intCurlNeg_unpad',ens_intCurlNeg_unpad, ...
-    'intCurlPos_pad',ens_intCurlPos_pad, 'intCurlNeg_pad',ens_intCurlNeg_pad, ...
-    'intCurlAbs_unpad',intCurlAbs_unpad, 'intCurlAbs_pad',intCurlAbs_pad, ...
-    'intCurlAbs_unpad_raw',ens_intCurlAbs_unpad_raw, 'filterRatio',filterRatio, ...
-    'intCurlNet_unpad',intCurlNet_unpad, 'intCurlNet_pad',intCurlNet_pad, ...
-    'meanAbsCurl_unpad',meanAbsCurl_unpad, 'meanAbsCurl_pad',meanAbsCurl_pad, 'padFrac',padFrac, ...
-    'settings',struct('med_len',ens_med_len,'c_perwave',ens_c_perwave,'h_source',h_source,'stride',ens_stride), ...
+    'intCurlPos',ens_intCurlPos, 'intCurlNeg',ens_intCurlNeg, ...
+    'intCurlAbs',intCurlAbs, 'meanAbsCurl',meanAbsCurl, ...
+    'settings',struct('med_len',ens_med_len,'c_perwave',ens_c_perwave,'h_source',h_source,'stride',ens_stride,'pad_dist',crest_pad_dist), ...
     'xc',ens_xc, 'yc',ens_yc, 'time',ens_t);
 
-%% ensemble plots: average forcing profile + curl profile
-shade = @(ax,x,lo,hi,col) fill(ax, [x fliplr(x)], [hi fliplr(lo)], col, 'FaceAlpha',0.25, 'EdgeColor','none');
-pick  = unique(round(linspace(1, nE, min(nE, ens_max_plot))));
-gcol  = [0.80 0.80 0.80];  bcol = [0.10 0.30 0.80];
+% %% ensemble plots: average forcing profile + curl profile
+% shade = @(ax,x,lo,hi,col) fill(ax, [x fliplr(x)], [hi fliplr(lo)], col, 'FaceAlpha',0.25, 'EdgeColor','none');
+% pick  = unique(round(linspace(1, nE, min(nE, ens_max_plot))));
+% gcol  = [0.80 0.80 0.80];  bcol = [0.10 0.30 0.80];
+% 
+% figure('Name','Ensemble profiles','Position',[100 100 1300 450]);
+% tl = tiledlayout(1,3,'TileSpacing','compact');
+% 
+% ax = nexttile; hold(ax,'on')
+% plot(ax, zgrid, Fmat(pick,:)', '-', 'Color', gcol)
+% shade(ax, zgrid, F_p16, F_p84, bcol);
+% plot(ax, zgrid, F_mean, '-',  'Color', bcol, 'LineWidth', 2)
+% plot(ax, zgrid, F_med,  '--', 'Color', 'k',  'LineWidth', 1.2)
+% xlabel(ax,'\zeta = s/L'); ylabel(ax,'F_{br} [m s^{-2}]'); title(ax,'Forcing profile')
+% grid(ax,'on'); box(ax,'on'); xlim(ax,[0 1]); ylim(ax,[0 prctile(Fmat(:),99)])
+% 
+% ax = nexttile; hold(ax,'on')
+% plot(ax, zgrid, Cmat(pick,:)', '-', 'Color', gcol)
+% shade(ax, zgrid, C_mean-C_std, C_mean+C_std, bcol);
+% h1 = plot(ax, zgrid, C_mean,  '-',  'Color', bcol, 'LineWidth', 2);
+% h2 = plot(ax, zgrid, CA_mean, '--', 'Color', [0.80 0.30 0.05], 'LineWidth', 2);
+% yline(ax, 0, 'k:')
+% legend(ax, [h1 h2], {'mean curl', 'mean |curl|'}, 'Location','best')
+% xlabel(ax,'\zeta = s/L'); ylabel(ax,'\nabla \times F_{br} [s^{-2}]', 'Interpreter','tex'); title(ax,'Along-crest curl profile')
+% grid(ax,'on'); box(ax,'on'); xlim(ax,[0 1]); ylim(ax,[-3 3]*mean(CA_mean))
+% 
+% ax = nexttile; hold(ax,'on')
+% plot(ax, zgrid, Fshape(pick,:)', '-', 'Color', gcol)
+% shade(ax, zgrid, S_p16, S_p84, bcol);
+% plot(ax, zgrid, S_mean, '-',  'Color', bcol, 'LineWidth', 2)
+% plot(ax, zgrid, S_med,  '--', 'Color', 'k',  'LineWidth', 1.2)
+% xlabel(ax,'\zeta = s/L'); ylabel(ax,'F_{br} / crest-mean F_{br}'); title(ax,'Amplitude-normalized shape')
+% grid(ax,'on'); box(ax,'on'); xlim(ax,[0 1]); ylim(ax,[0 prctile(Fshape(:),99)])
+% 
+% title(tl, sprintf('Wave-by-wave ensemble (N = %d; mean, median dashed, 16-84%% band) - %s', nE, dateTimeLabel), 'FontSize', 14)
 
-figure('Name','Ensemble profiles','Position',[100 100 1300 450]);
-tl = tiledlayout(1,3,'TileSpacing','compact');
-
-ax = nexttile; hold(ax,'on')
-plot(ax, zgrid, Fmat(pick,:)', '-', 'Color', gcol)
-shade(ax, zgrid, F_p16, F_p84, bcol);
-plot(ax, zgrid, F_mean, '-',  'Color', bcol, 'LineWidth', 2)
-plot(ax, zgrid, F_med,  '--', 'Color', 'k',  'LineWidth', 1.2)
-xlabel(ax,'\zeta = s/L'); ylabel(ax,'F_{br} [m s^{-2}]'); title(ax,'Forcing profile')
-grid(ax,'on'); box(ax,'on'); xlim(ax,[0 1]); ylim(ax,[0 prctile(Fmat(:),99)])
-
-ax = nexttile; hold(ax,'on')
-plot(ax, zgrid, Cmat(pick,:)', '-', 'Color', gcol)
-shade(ax, zgrid, C_mean-C_std, C_mean+C_std, bcol);
-h1 = plot(ax, zgrid, C_mean,  '-',  'Color', bcol, 'LineWidth', 2);
-h2 = plot(ax, zgrid, CA_mean, '--', 'Color', [0.80 0.30 0.05], 'LineWidth', 2);
-yline(ax, 0, 'k:')
-legend(ax, [h1 h2], {'mean curl', 'mean |curl|'}, 'Location','best')
-xlabel(ax,'\zeta = s/L'); ylabel(ax,'\nabla \times F_{br} [s^{-2}]', 'Interpreter','tex'); title(ax,'Along-crest curl profile')
-grid(ax,'on'); box(ax,'on'); xlim(ax,[0 1]); ylim(ax,[-3 3]*mean(CA_mean))
-
-ax = nexttile; hold(ax,'on')
-plot(ax, zgrid, Fshape(pick,:)', '-', 'Color', gcol)
-shade(ax, zgrid, S_p16, S_p84, bcol);
-plot(ax, zgrid, S_mean, '-',  'Color', bcol, 'LineWidth', 2)
-plot(ax, zgrid, S_med,  '--', 'Color', 'k',  'LineWidth', 1.2)
-xlabel(ax,'\zeta = s/L'); ylabel(ax,'F_{br} / crest-mean F_{br}'); title(ax,'Amplitude-normalized shape')
-grid(ax,'on'); box(ax,'on'); xlim(ax,[0 1]); ylim(ax,[0 prctile(Fshape(:),99)])
-
-title(tl, sprintf('Wave-by-wave ensemble (N = %d; mean, median dashed, 16-84%% band) - %s', nE, dateTimeLabel), 'FontSize', 14)
-
-%% ensemble plots: per-crest distributions
-ucol = [0.80 0.30 0.05];
+%% ensemble plots: per-crest distributions (padded crests)
+bcol = [0.10 0.30 0.80];
 figure;
-tiledlayout(2,2,'TileSpacing','compact');
+tl = tiledlayout(2,2,'TileSpacing','compact');
 
-nexttile; histogram(ens_L, 'FaceColor', bcol, 'EdgeColor','none');
-xlabel('Crest length L [m]'); ylabel('Count'); title('Crest length (real points)'); grid on; box on
+nexttile(1); histogram(ens_L, 'FaceColor', bcol, 'EdgeColor','none');                % top left
+xlabel('Crest length L [m]'); ylabel('Count'); title('Crest length'); grid on; box on
+xlim([0 150]);
 
-nexttile; histogram(ens_Fmean, 'FaceColor', bcol, 'EdgeColor','none');
+nexttile(3); histogram(ens_Fmean, 'FaceColor', bcol, 'EdgeColor','none');            % bottom left
 xlabel('Crest-mean F_{br} [m s^{-2}]'); ylabel('Count'); title('Crest-mean breaking force'); grid on; box on
+% xlim([0 150]);
 
-nexttile; hold on
-histogram(ens_intCurlAbs_unpad_raw, 'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 0.5, 'EdgeColor','none');
-histogram(intCurlAbs_unpad, 'FaceColor', bcol, 'FaceAlpha', 0.5, 'EdgeColor','none');
-histogram(intCurlAbs_pad,   'FaceColor', ucol, 'FaceAlpha', 0.5, 'EdgeColor','none');
-xlabel('intCurlAbs = \Sigma|\DeltaF_{br}| [m s^{-2}]'); ylabel('Count')
-legend('unpadded, unfiltered', 'unpadded, filtered', 'padded, filtered', 'Location','best'); title('Total vorticity forcing per crest'); grid on; box on
+nexttile(2, [2 1]); histogram(intCurlAbs, 'FaceColor', bcol, 'EdgeColor','none');    % entire right side
+xlabel('\Omega_c = \Sigma|\nabla\times F_{br}| \Deltas [m s^{-2}]'); ylabel('Count')
+title('Total vorticity forcing per crest'); grid on; box on
 
-nexttile; hold on
-histogram(meanAbsCurl_unpad_raw, 'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 0.5, 'EdgeColor','none');
-histogram(meanAbsCurl_unpad,     'FaceColor', bcol, 'FaceAlpha', 0.5, 'EdgeColor','none');
-histogram(meanAbsCurl_pad,       'FaceColor', ucol, 'FaceAlpha', 0.5, 'EdgeColor','none');
-xlabel('meanAbsCurl [s^{-2}]'); ylabel('Count')
-legend('unpadded, unfiltered', 'unpadded, filtered', 'padded, filtered', 'Location','best'); title('Mean |curl| per crest'); grid on; box on
+title(tl, sprintf('Per-crest distributions (N = %d) - %s', nE, dateTimeLabel), 'FontSize', 13)
 
 %% scatterplots: intensity vs variability vs length as controls on vorticity forcing
-mac = mac_set.(ens_scatter_version);
-tot = tot_set.(ens_scatter_version);
-sp = {ens_Fmean, mac, 'Crest-mean F_{br} [m s^{-2}]',           'Mean |\nabla\times F_{br}| [s^{-2}]'
-      ens_L,     mac, 'Crest length L [m]',                      'Mean |\nabla\times F_{br}| [s^{-2}]'
-      ens_L,     tot, 'Crest length L [m]',                      'Total \Sigma|\DeltaF_{br}| [m s^{-2}]'
-      ens_Fstd,  mac, 'Along-crest std of F_{br} [m s^{-2}]',    'Mean |\nabla\times F_{br}| [s^{-2}]'};
+sp = {ens_Fmean, meanAbsCurl, 'Crest-mean F_{br} [m s^{-2}]',           'Mean |\nabla\times F_{br}| [s^{-2}]'
+      ens_L,     meanAbsCurl, 'Crest length L [m]',                      'Mean |\nabla\times F_{br}| [s^{-2}]'
+      ens_L,     intCurlAbs,  'Crest length L [m]',                      'Total \Sigma|\DeltaF_{br}| [m s^{-2}]'
+      ens_Fstd,  meanAbsCurl, 'Along-crest std of F_{br} [m s^{-2}]',    'Mean |\nabla\times F_{br}| [s^{-2}]'};
 
 figure;
 tl = tiledlayout(2,2,'TileSpacing','compact');
@@ -1108,7 +1064,7 @@ for i = 1:size(sp,1)
     title(ax, sprintf('r = %.2f, \\rho_s = %.2f', r(1), r(2)))
     xlabel(ax, sp{i,3}); ylabel(ax, sp{i,4}); grid(ax,'on'); box(ax,'on')
 end
-title(tl, sprintf('Vorticity forcing per crest (%s, N = %d, med %.0f m, h: %s) - %s', ens_scatter_version, nE, ens_med_len, h_source, dateTimeLabel), 'FontSize', 13)
+title(tl, sprintf('Vorticity forcing per crest (N = %d, med %.0f m, h: %s) - %s', nE, ens_med_len, h_source, dateTimeLabel), 'FontSize', 13)
 
 %% FRAME DIAGNOSTIC: normalized along-crest grid, Fbr vectors, profiles for the crests in one frame
 if isempty(D)
@@ -1133,12 +1089,13 @@ else
     end
     colormap(axM, parula); clim(axM, [0 1])
     for k = 1:numel(D)
-        plot(axM, [D(k).xend(1); D(k).x; D(k).xend(2)], [D(k).yend(1); D(k).y; D(k).yend(2)], '-', 'Color', ccols(k,:), 'LineWidth', 1.5)
+        plot(axM, D(k).x, D(k).y, '-', 'Color', ccols(k,:), 'LineWidth', 1.5)                               % padded crest path
         scatter(axM, D(k).x, D(k).y, 22, D(k).zeta, 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 0.3)
-        plot(axM, D(k).xend, D(k).yend, 'x', 'Color', ccols(k,:), 'MarkerSize', 8, 'LineWidth', 1.5)       % crest ends (Fbr = 0 pads)
-        qi = 1:ens_diag_vec_stride:numel(D(k).x);
-        quiver(axM, D(k).x(qi), D(k).y(qi), ens_diag_vec_scale*D(k).F(qi).*cos(D(k).dir(qi)), ...
-            ens_diag_vec_scale*D(k).F(qi).*sin(D(k).dir(qi)), 1, ...      % 0 = no autoscale: arrow length = scale * F [m]
+        plot(axM, D(k).x([1 end]), D(k).y([1 end]), 'x', 'Color', ccols(k,:), 'MarkerSize', 8, 'LineWidth', 1.5)   % Fbr = 0 pad points
+        xr = D(k).x(2:end-1);  yr = D(k).y(2:end-1);  Fr = D(k).F(2:end-1);      % measured points carry the vectors
+        qi = 1:ens_diag_vec_stride:numel(xr);
+        quiver(axM, xr(qi), yr(qi), ens_diag_vec_scale*Fr(qi).*cos(D(k).dir(qi)), ...
+            ens_diag_vec_scale*Fr(qi).*sin(D(k).dir(qi)), 1, ...
             'Color', [0 .3 0], 'LineWidth', 0.8, 'MaxHeadSize', 0.3)
         [zq, iq] = unique(D(k).zeta);
         xt = interp1(zq, D(k).x(iq), tick_z);  yt = interp1(zq, D(k).y(iq), tick_z);
@@ -1156,13 +1113,21 @@ else
     title(axM, sprintf('Crests, normalized coordinate \\zeta (labels), F_{br} vectors (green) - %s', string(diag_time)))
     view(axM, [-90 90])
 
+    % profiles: x-axis reversed so zeta runs right to left, like the crests in the map (towards +alongshore)
     axF = nexttile; hold(axF,'on')
     for k = 1:numel(D)
-        plot(axF, D(k).zeta, D(k).Fraw, ':', 'Color', ccols(k,:), 'LineWidth', 1)
-        plot(axF, D(k).zeta, D(k).F,    '-', 'Color', ccols(k,:), 'LineWidth', 1.8)
+        if ens_filter_on
+            plot(axF, D(k).zeta, D(k).Fraw, ':', 'Color', ccols(k,:), 'LineWidth', 1)
+        end
+        plot(axF, D(k).zeta, D(k).F, '-', 'Color', ccols(k,:), 'LineWidth', 1.8)
     end
     xlabel(axF,'\zeta = s/L'); ylabel(axF,'F_{br} [m s^{-2}]'); xlim(axF,[0 1]); grid(axF,'on'); box(axF,'on')
-    title(axF, sprintf('F_{br}(\\zeta): dotted = unfiltered, solid = filtered (%.0f m)', ens_med_len))
+    set(axF, 'XDir', 'reverse')
+    if ens_filter_on
+        title(axF, sprintf('F_{br}(\\zeta): dotted = unfiltered, solid = filtered (%.0f m)', ens_med_len))
+    else
+        title(axF, 'F_{br}(\zeta)')
+    end
 
     axC = nexttile; hold(axC,'on')
     for k = 1:numel(D)
@@ -1170,6 +1135,7 @@ else
     end
     yline(axC, 0, 'k:')
     xlabel(axC,'\zeta = s/L'); ylabel(axC,'\nabla \times F_{br} [s^{-2}]'); xlim(axC,[0 1]); grid(axC,'on'); box(axC,'on')
+    set(axC, 'XDir', 'reverse')
     title(axC, 'Along-crest curl(\zeta)')
     title(tl, 'Single-frame diagnostic: individual breaking waves in the normalized crest system', 'FontSize', 14)
 end
@@ -1182,7 +1148,7 @@ fprintf('Ensemble section total: %.1f s\n', toc(t_ens));
 %% ===== SPATIAL MAPS: ensemble vs hourly-averaged approach =====
 % Uses the SAME bins as the hourly maps (x_edges / y_edges / x_centers / y_centers from "BIN BREAKING FORCE").
 % Hourly quantities: Fbr_mag_grid, Fbr_curl_grid, curl_x/curl_y/curl_val (padded, unfiltered, remote h).
-% Ensemble quantities: filtered Fbr, depth from h_source, per-crest padded / unpadded segments (stored by PART 1).
+% Ensemble quantities: filtered Fbr, depth from h_source, per-crest padded segments (stored by the ensemble loop).
 
 map_min_pts    = 10;    % min points per bin for Fbr maps (hourly used 10)
 map_min_seg    = 25;    % min curl segments per bin (hourly used 25)
@@ -1197,34 +1163,31 @@ cm_seq = cmocean('-thermal');
 cm_div = cmocean('balance');
 tag    = sprintf('ensemble: med %.0f m, h: %s', ens_med_len, h_source);
 
-PT  = vertcat(map_pts{:});        % [x y F_filtered F_raw crestIdx]
-SGP = vertcat(map_seg_pad{:});    % [xmid ymid curl crestIdx]  padded
-SGU = vertcat(map_seg_unp{:});    % [xmid ymid curl crestIdx]  unpadded
+PT = vertcat(map_pts{:});     % [x y F_filtered F_raw crestIdx]
+SG = vertcat(map_seg{:});     % [xmid ymid curl crestIdx]
 
 % ---- binned fields ----
 F_hr = Fbr_mag_grid;                                   % hourly mean Fbr
-C_hr = Fbr_curl_grid;                                  % hourly mean curl (padded)
-[A_hr,  ~]     = bin_grid(curl_x,    curl_y,    abs(curl_val), @mean, x_edges, y_edges, map_min_seg);   % hourly mean |curl|
-[F_ens, ~]     = bin_grid(PT(:,1),   PT(:,2),   PT(:,3),       @mean, x_edges, y_edges, map_min_pts);
-[C_pad, N_pad] = bin_grid(SGP(:,1),  SGP(:,2),  SGP(:,3),      @mean, x_edges, y_edges, map_min_seg);
-[C_unp, ~]     = bin_grid(SGU(:,1),  SGU(:,2),  SGU(:,3),      @mean, x_edges, y_edges, map_min_seg);
-[A_pad, ~]     = bin_grid(SGP(:,1),  SGP(:,2),  abs(SGP(:,3)), @mean, x_edges, y_edges, map_min_seg);
-[A_unp, ~]     = bin_grid(SGU(:,1),  SGU(:,2),  abs(SGU(:,3)), @mean, x_edges, y_edges, map_min_seg);
-Coh_pad = abs(C_pad) ./ A_pad;                         % |mean curl| / mean |curl|: 1 = coherent sign, 0 = random sign
+C_hr = Fbr_curl_grid;                                  % hourly mean curl
+[A_hr,  ~] = bin_grid(curl_x,  curl_y,  abs(curl_val), @mean, x_edges, y_edges, map_min_seg);   % hourly mean |curl|
+[F_ens, ~] = bin_grid(PT(:,1), PT(:,2), PT(:,3),       @mean, x_edges, y_edges, map_min_pts);
+[C_ens, ~] = bin_grid(SG(:,1), SG(:,2), SG(:,3),       @mean, x_edges, y_edges, map_min_seg);
+[A_ens, ~] = bin_grid(SG(:,1), SG(:,2), abs(SG(:,3)),  @mean, x_edges, y_edges, map_min_seg);
+Coh_ens = abs(C_ens) ./ A_ens;                         % |mean curl| / mean |curl|: 1 = coherent sign, 0 = random sign
 
 % ---- agreement with the hourly approach (bin by bin) ----
 fprintf('\n===== ENSEMBLE vs HOURLY-AVERAGED (%s) =====\n', tag)
-pairs = {'mean Fbr',                 F_hr, F_ens
-         'mean curl (padded)',       C_hr, C_pad
-         'mean |curl| (padded)',     A_hr, A_pad};
+pairs = {'mean Fbr',      F_hr, F_ens
+         'mean curl',     C_hr, C_ens
+         'mean |curl|',   A_hr, A_ens};
 for i = 1:size(pairs,1)
     a = pairs{i,2}(:);  b = pairs{i,3}(:);  mm = isfinite(a) & isfinite(b);
     pfit = polyfit(a(mm), b(mm), 1);
     fprintf('  %-22s bins %4d | r = %.3f | slope = %.3f | bias(ens-hr) = %+.4f | RMSE = %.4f\n', ...
         pairs{i,1}, nnz(mm), corr(a(mm), b(mm)), pfit(1), mean(b(mm)-a(mm)), sqrt(mean((b(mm)-a(mm)).^2)))
 end
-fprintf('  pooled mean |curl|: hourly %.4f | ensemble padded %.4f | ensemble unpadded %.4f s^-2\n', ...
-    mean(abs(curl_val),'omitnan'), mean(abs(SGP(:,3)),'omitnan'), mean(abs(SGU(:,3)),'omitnan'))
+fprintf('  pooled mean |curl|: hourly %.4f | ensemble %.4f s^-2\n', ...
+    mean(abs(curl_val),'omitnan'), mean(abs(SG(:,3)),'omitnan'))
 fprintf('  REGRESSION TEST: with ens_med_len = 0, h_source = ''remote'', ens_stride = 1 the two should agree closely (r ~ 1, slope ~ 1).\n')
 
 % % ---- FIGURE 1: hourly vs ensemble maps of Fbr and curl ----
@@ -1233,36 +1196,27 @@ fprintf('  REGRESSION TEST: with ens_med_len = 0, h_source = ''remote'', ens_str
 % show_map(nexttile, x_centers, y_centers, F_hr,         'F_{br} hourly mean',                       F_clim, cm_seq, 'F_{br} [m s^{-2}]', map_xlim, map_ylim);
 % show_map(nexttile, x_centers, y_centers, F_ens,        ['F_{br} ' tag],                            F_clim, cm_seq, 'F_{br} [m s^{-2}]', map_xlim, map_ylim);
 % show_map(nexttile, x_centers, y_centers, F_ens - F_hr, 'F_{br} ensemble - hourly',                 [-0.2 0.2], cm_div, '\DeltaF_{br} [m s^{-2}]', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, C_hr,         '\nabla\times F_{br} hourly (padded)',      curl_clim, cm_div, '\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, C_pad,        ['\nabla\times F_{br} padded, ' tag],       curl_clim, cm_div, '\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, C_unp,        ['\nabla\times F_{br} unpadded, ' tag],     curl_clim, cm_div, '\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
+% show_map(nexttile, x_centers, y_centers, C_hr,         '\nabla\times F_{br} hourly',               curl_clim, cm_div, '\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
+% show_map(nexttile, x_centers, y_centers, C_ens,        ['\nabla\times F_{br} ' tag],               curl_clim, cm_div, '\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
+% show_map(nexttile, x_centers, y_centers, C_ens - C_hr, '\nabla\times F_{br} ensemble - hourly',    curl_clim, cm_div, '\Delta\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
 % title(tl, sprintf('Hourly-averaged vs wave-by-wave ensemble binning - %s', dateTimeLabel), 'FontSize', 14)
 
-% % ---- FIGURE 2: structure of the forcing (what the signed average hides) ----
-% a_cl = [0 prctile([A_pad(:); A_unp(:)], 98)];
-% figure('Name','Spatial: forcing structure','Position',[60 60 1200 800]);
-% tl = tiledlayout(2,2,'TileSpacing','compact');
-% show_map(nexttile, x_centers, y_centers, A_unp,   'mean |\nabla\times F_{br}| unpadded', a_cl, cm_seq, '|\nabla\times F_{br}| [s^{-2}]', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, A_pad,   'mean |\nabla\times F_{br}| padded',   a_cl, cm_seq, '|\nabla\times F_{br}| [s^{-2}]', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, Coh_pad, 'coherence |<curl>| / <|curl|> (padded)', [0 1], cm_seq, 'coherence', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, log10(N_pad), 'sample size: curl segments per bin', [], cm_seq, 'log_{10} N', map_xlim, map_ylim);
-% title(tl, sprintf('Where the forcing is, and how much of it survives averaging - %s (%s)', dateTimeLabel, tag), 'FontSize', 14)
 
 % ---- FIGURE 3: validation against the hourly approach ----
 figure('Name','Spatial: validation','Position',[60 60 1300 800]);
 tl = tiledlayout(2,2,'TileSpacing','compact');
 
 ax = nexttile; hold(ax,'on')
-a = C_hr(:); b = C_pad(:); mm = isfinite(a) & isfinite(b);
+a = C_hr(:); b = C_ens(:); mm = isfinite(a) & isfinite(b);
 scatter(ax, a(mm), b(mm), 14, [0.10 0.30 0.80], 'filled', 'MarkerFaceAlpha', 0.5)
 lim = [-1 1] * max(abs([a(mm); b(mm)]));
 plot(ax, lim, lim, 'k--')
 pfit = polyfit(a(mm), b(mm), 1);
-xlabel(ax,'hourly <\nabla\times F_{br}> [s^{-2}]'); ylabel(ax,'ensemble <\nabla\times F_{br}> (padded) [s^{-2}]')
+xlabel(ax,'hourly <\nabla\times F_{br}> [s^{-2}]'); ylabel(ax,'ensemble <\nabla\times F_{br}> [s^{-2}]')
 title(ax, sprintf('bin-by-bin curl: r = %.2f, slope = %.2f', corr(a(mm), b(mm)), pfit(1)))
 axis(ax,'equal'); xlim(ax,lim); ylim(ax,lim); grid(ax,'on'); box(ax,'on')
 
-show_map(nexttile, x_centers, y_centers, C_pad - C_hr, 'curl: ensemble padded - hourly', curl_clim, cm_div, '\Delta\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
+show_map(nexttile, x_centers, y_centers, C_ens - C_hr, 'curl: ensemble - hourly', curl_clim, cm_div, '\Delta\nabla\times F_{br} [s^{-2}]', map_xlim, map_ylim);
 
 ax = nexttile; hold(ax,'on')                                  % cross-shore profile of Fbr (alongshore mean)
 both = isfinite(F_hr) & isfinite(F_ens);
@@ -1273,30 +1227,14 @@ xlabel(ax,'Cross-shore [m]'); ylabel(ax,'alongshore-mean F_{br} [m s^{-2}]'); le
 title(ax,'Cross-shore profile of F_{br}'); grid(ax,'on'); box(ax,'on')
 
 ax = nexttile; hold(ax,'on')                                  % cross-shore profile of mean |curl|
-both = isfinite(A_hr) & isfinite(A_pad);
-Ah = A_hr;  Ah(~both) = NaN;   Ap = A_pad;  Ap(~both) = NaN;   Au = A_unp;  Au(~both) = NaN;
+both = isfinite(A_hr) & isfinite(A_ens);
+Ah = A_hr;  Ah(~both) = NaN;   Ae = A_ens;  Ae(~both) = NaN;
 plot(ax, x_centers, mean(Ah,1,'omitnan'), 'k-',  'LineWidth', 2)
-plot(ax, x_centers, mean(Ap,1,'omitnan'), 'b--', 'LineWidth', 2)
-plot(ax, x_centers, mean(Au,1,'omitnan'), 'r:',  'LineWidth', 2)
+plot(ax, x_centers, mean(Ae,1,'omitnan'), 'b--', 'LineWidth', 2)
 xlabel(ax,'Cross-shore [m]'); ylabel(ax,'alongshore-mean |\nabla\times F_{br}| [s^{-2}]')
-legend(ax,'hourly (padded)','ensemble padded','ensemble unpadded','Location','best')
+legend(ax,'hourly','ensemble','Location','best')
 title(ax,'Cross-shore profile of mean |curl|'); grid(ax,'on'); box(ax,'on')
 title(tl, sprintf('Does the ensemble reproduce the hourly-averaged result? - %s (%s)', dateTimeLabel, tag), 'FontSize', 14)
-
-% % ---- FIGURE 4: per-crest quantities binned by crest centroid ----
-% [L_c,  N_c] = bin_grid(ens_xc, ens_yc, ens_L,                @mean, x_edges, y_edges, map_min_crests);
-% [F_c,  ~]   = bin_grid(ens_xc, ens_yc, ens_Fmean,            @mean, x_edges, y_edges, map_min_crests);
-% [M_c,  ~]   = bin_grid(ens_xc, ens_yc, meanAbsCurl_unpad,    @mean, x_edges, y_edges, map_min_crests);
-% N_c(N_c < map_min_crests) = NaN;
-% figure('Name','Spatial: per-crest maps','Position',[60 60 1200 800]);
-% tl = tiledlayout(2,2,'TileSpacing','compact');
-% show_map(nexttile, x_centers, y_centers, N_c, 'crest centroids per bin', [], cm_seq, 'count', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, L_c, 'mean crest length', [0 prctile(L_c(:),98)], cm_seq, 'L [m]', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, F_c, 'mean crest-mean F_{br}', [0 prctile(F_c(:),98)], cm_seq, 'F_{br} [m s^{-2}]', map_xlim, map_ylim);
-% show_map(nexttile, x_centers, y_centers, M_c, 'mean per-crest meanAbsCurl (unpadded)', [0 prctile(M_c(:),98)], cm_seq, '[s^{-2}]', map_xlim, map_ylim);
-% title(tl, sprintf('Per-crest quantities by crest centroid - %s (%s)', dateTimeLabel, tag), 'FontSize', 14)
-
-
 
 
 %% LOCAL FUNCTIONS
@@ -1392,15 +1330,12 @@ end
 end
 
 function [crestID, s] = trace_crest_paths(x, y, max_link_dist)
-% TRACE_CREST_PATHS  Along-crest order for an unorganized (x,y) point cloud
-% that may contain several separate crests. Each point is chained to its
-% nearest not-yet-used neighbor; a crest ends where no neighbor lies within
-% max_link_dist (ran out of points), or where the nearest neighbor would
-% reverse the direction of travel already established along that crest
-% (tracing back up the crest instead of further along it). Each crest's
-% arclength s is oriented to increase with y, so curl signs stay consistent
-% across crests and frames regardless of which point tracing happened to
-% start from.
+% TRACE_CREST_PATHS  Along-crest order for an unorganized (x,y) point cloud that may contain several separate crests.
+% Each point is chained to its nearest not-yet-used neighbor; a crest ends where no neighbor lies within
+% max_link_dist (ran out of points), or where the nearest neighbor would reverse the direction of travel already 
+% established along that crest(tracing back up the crest instead of further along it). Each crest's
+% arclength s is oriented to increase with y, so curl signs stay consistent across crests and frames regardless of 
+% which point tracing happened to start from.
 n       = numel(x);
 crestID = nan(n,1);
 s       = nan(n,1);

@@ -811,7 +811,7 @@ for kk = 1:numberVideoFrames
 
     title(axAnim, sprintf('Tracked fronts - frame %d / %d', kk, numberVideoFrames));
     % fprintf('frame %d\n', kk);              % progress: should count up in the Command Window
-    pause(0.1);                             % pause alone flushes graphics; no separate drawnow
+    pause(0.3);                             % pause alone flushes graphics; no separate drawnow
 end
 
 %%

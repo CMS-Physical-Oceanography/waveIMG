@@ -1,8 +1,7 @@
 %% Sensor locations over interpolated bathymetry
 
 % 1. Read bathymetry
-bathyFile = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy/' ...
-    'waveIMG-main/waveIMG-main/data/bathy_surveys/RODDebbieTimeLagFix_20131002.xyz'];
+bathyFile = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_Eddies/data/bathy_surveys/FRF_20210830_1210_DUNEX_NAVD88_LARC_GPS_UTC_v20210831.csv'];
 
 bathy = readmatrix(bathyFile,'FileType','text');
 
@@ -32,8 +31,7 @@ Zdepth = -Zq;
 
 % 3. Read pressure sensor locations
 
-sensorFile = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS/waveIMG_cpy' ...
-    '/waveIMG-main/waveIMG-main/data/sensor_data/RODSEX_sensors_locs.xyz'];
+sensorFile = ['/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/RIPS_local/waveIMG_cpy/waveIMG-main/waveIMG-main/data/SURF-AI field data/2021/Sensor locations/2021_surf_deployed.xyz'];
 
 fid = fopen(sensorFile,'r');
 sensorData = [];

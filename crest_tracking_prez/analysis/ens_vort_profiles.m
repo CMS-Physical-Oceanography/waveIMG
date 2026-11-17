@@ -1,0 +1,261 @@
+% Single-frame diagnostic: individual breaking waves in the normalized (padded) crest system.
+% Stand-alone: loads one processed run and draws the crests, Fbr vectors, Fbr(zeta) and curl(zeta) for one frame.
+
+% *** Gives figure for single-frame diagnostic with along-crest normalized coords and Fbr + curl(Fbr) profiles
+
+%% USER INPUT
+diag_frame_idx = 100;            % which frame to plot: index into the frames of the last video file of the hour
+
+runDate    = '20131002';        % yyyymmdd of the video run
+hourStr    = '1200';            % hhmm
+surveyDate = '20131002';        % yyyymmdd of the bathy survey
+year_str   = '2013';
+camera     = 'rod13';
+
+diag_max_crests = 8;      % draw only the N longest crests of the frame
+diag_vec_scale  = 6;      % [m of arrow per m s^-2 of Fbr]
+diag_vec_stride = 2;      % draw every Nth vector so the crest stays readable
+label_off       = 4;      % [m] how far above the crest (offshore) the labels are drawn
+
+g           = 9.81;
+theta_r     = deg2rad(15);   % roller angle
+h_min       = 0.25;          % m, exclude shallower points (Fbr ~ 1/h blows up)
+c_speed_min = 1;             % m/s, exclude unrealistic celerity values
+c_speed_max = 7;
+
+max_match_dist      = 2;     % m, max distance between a celerity point and its crest-width point
+max_crest_link_dist = 10;    % m, beyond this gap a traced crest ends
+crest_pad_dist      = 2;     % m, distance of the Fbr = 0 pad point beyond each crest end
+min_curl_dist       = 0.5;   % m, floor on point spacing before curl is computed
+min_pts             = 5;     % min matched Fbr points for a crest to be drawn
+min_L               = 3;     % m, min along-crest span of the measured points (before padding)
+survey_max_gap      = 15;    % m, discard interpolated depth farther than this from any survey point
+
+%% paths
+dataRoot = '/Users/prezleystrait/Library/CloudStorage/OneDrive-UNC-Wilmington/rips_onedrive/NSF_Eddies';
+matDir   = fullfile(dataRoot, 'mat_data');
+tideFile = fullfile(dataRoot, 'data', 'tide_duck', sprintf('duck_waterLvls%s.csv', year_str));
+buoyFile = fullfile(dataRoot, 'data', 'buoy_data', sprintf('%s_buoyHsDuck.txt', year_str));
+svyFile  = fullfile(dataRoot, 'data', 'bathy_surveys', sprintf('RODDebbieTimeLagFix_%s.xyz', surveyDate));
+
+%% tide and mean wave period for the hour
+t0 = datetime([runDate hourStr], 'InputFormat', 'yyyyMMddHHmm');
+
+Ttide    = readtable(tideFile, 'TextType', 'string');
+tideTime = datetime(Ttide.Date, 'InputFormat', 'yyyy/MM/dd') + duration(Ttide.Time_LST_LDT_, 'InputFormat', 'hh:mm');
+tide     = mean(Ttide.Verified_m_(tideTime >= t0 & tideTime < t0 + hours(1)), 'omitnan');
+
+Tb = readtable(buoyFile, detectImportOptions(buoyFile, 'NumHeaderLines', 2));
+buoyTime = datetime(Tb{:,1}, Tb{:,2}, Tb{:,3}, Tb{:,4}, Tb{:,5}, 0);
+APD = Tb{:,11};  APD(APD >= 99) = NaN;                       % average wave period; 99 = NDBC missing flag
+T_mean = mean(APD(buoyTime >= t0 & buoyTime < t0 + hours(1)), 'omitnan');
+if isnan(tide) || isnan(T_mean); error('No tide or buoy period for %s %s.', runDate, hourStr); end
+
+%% load processed video output (newest match; also looks in local_runs)
+Lf = [dir(fullfile(matDir, sprintf('%s_%s_%s*.mat', camera, runDate, hourStr)))
+      dir(fullfile(matDir, 'local_runs', sprintf('%s_%s_%s*.mat', camera, runDate, hourStr)))];
+if isempty(Lf); error('No mat file for %s_%s_%s in %s', camera, runDate, hourStr, matDir); end
+[~, iNew] = max([Lf.datenum]);
+S = load(fullfile(Lf(iNew).folder, Lf(iNew).name), 'all_celerity_total', 'all_celerity_time_total', ...
+    'all_crest_width_pts_total', 'all_crest_width_time_total', ...
+    'fileStartStamp', 'frameTimes', 'numberVideoFrames', 'rectified_frames', 'X', 'Y');
+
+%% pick the frame
+% rectified_frames holds the LAST video file of the hour, so only its frames can be drawn
+frame_times_abs = S.fileStartStamp + seconds(S.frameTimes(2:S.numberVideoFrames+1));
+
+C  = S.all_celerity_total;                 % [x, y, cx, cy, c]
+tC = S.all_celerity_time_total(:);
+keep = C(:,5) > c_speed_min & C(:,5) < c_speed_max & tC >= min(frame_times_abs) & tC <= max(frame_times_abs);
+C  = C(keep,:);  tC = tC(keep);
+W  = S.all_crest_width_pts_total;          % [x, y, width]
+tW = S.all_crest_width_time_total(:);
+
+% frames that have at least one celerity point with a matched crest width
+frames = unique(tC);
+has_match = false(size(frames));
+for k = 1:numel(frames)
+    w = W(tW == frames(k), :);
+    if isempty(w); continue; end
+    [nn, d] = knnsearch(w(:,1:2), C(tC == frames(k), 1:2));
+    has_match(k) = any(d <= max_match_dist & w(nn,3) > 0);
+end
+frames = frames(has_match);
+if isempty(frames); error('No matched crest points in the last video file.'); end
+diag_time = frames(min(diag_frame_idx, numel(frames)));
+
+%% points of that frame: crest ID, along-crest order, crest width, depth, Fbr
+w = W(tW == diag_time, :);
+P = C(tC == diag_time, :);
+[crestID_w, s_w] = trace_crest_paths(w(:,1), w(:,2), max_crest_link_dist);   % trace the width cloud into crests
+[nn, d] = knnsearch(w(:,1:2), P(:,1:2));                                     % snap celerity points onto it
+m = d <= max_match_dist & w(nn,3) > 0;
+P = P(m,:);  nn = nn(m);
+
+x = P(:,1);  y = P(:,2);  c = P(:,5);
+Wd      = w(nn,3);                         % crest width at each point
+Fdir    = atan2(P(:,4), -abs(P(:,3)));     % Fbr direction = celerity direction, forced onshore (-x)
+crestID = crestID_w(nn);
+s_along = s_w(nn);
+
+% survey water depth, h = tide - NAVD88 bed elevation
+sv = readmatrix(svyFile, 'FileType', 'text');
+sv = sv(all(isfinite(sv(:,1:3)), 2), 1:3);
+zb = scatteredInterpolant(sv(:,1), sv(:,2), sv(:,3), 'linear', 'none');
+h  = tide - zb(x, y);
+[~, d_sv] = knnsearch(sv(:,1:2), [x y]);
+h(d_sv > survey_max_gap) = NaN;
+
+F = 0.9*g/T_mean * 0.11*tan(theta_r)*sec(theta_r) * Wd.^2 ./ (c .* h);       % Fbr (Duncan 1981)
+
+%% build each padded crest
+D = struct('x',{},'y',{},'F',{},'dir',{},'zeta',{},'L',{},'curl',{},'zmid',{});
+for id = unique(crestID)'
+    cm = find(crestID == id);
+    [~, ord] = sort(s_along(cm));
+    cm = cm(ord);
+    cm = cm(isfinite(F(cm)) & h(cm) > h_min);
+    if numel(cm) < max(min_pts, 2); continue; end
+    cx = x(cm);  cy = y(cm);
+    if sum(hypot(diff(cx), diff(cy))) < min_L; continue; end
+
+    % pad: Fbr = 0 point one crest_pad_dist beyond each end
+    e1 = [cx(1)-cx(2),       cy(1)-cy(2)];        e1 = e1 / max(norm(e1), eps);
+    e2 = [cx(end)-cx(end-1), cy(end)-cy(end-1)];  e2 = e2 / max(norm(e2), eps);
+    xp = [cx(1)+crest_pad_dist*e1(1); cx; cx(end)+crest_pad_dist*e2(1)];
+    yp = [cy(1)+crest_pad_dist*e1(2); cy; cy(end)+crest_pad_dist*e2(2)];
+    Fp = [0; F(cm); 0];
+
+    ds   = hypot(diff(xp), diff(yp));
+    s    = [0; cumsum(ds)];
+    zeta = s / s(end);                              % normalized along-crest coordinate, pad to pad
+    curl = diff(Fp) ./ ds;                          % along-crest curl
+    curl(ds < min_curl_dist) = NaN;
+
+    D(end+1) = struct('x',xp, 'y',yp, 'F',Fp, 'dir',Fdir(cm), 'zeta',zeta, 'L',s(end), ...
+        'curl',curl, 'zmid',0.5*(zeta(1:end-1)+zeta(2:end)));
+end
+if isempty(D); error('No crests passed the filters in frame index %d; change diag_frame_idx.', diag_frame_idx); end
+
+[~, ordL] = sort([D.L], 'descend');
+D = D(ordL(1:min(diag_max_crests, numel(D))));
+
+%% plot
+ccols  = lines(numel(D));
+tick_z = [0 0.5 1];
+
+figure;
+tl = tiledlayout(2,3,'TileSpacing','compact');
+
+% ---- map: crests colored by zeta, Fbr vectors ----
+axM = nexttile([2 2]); hold(axM,'on')
+rf = find(frame_times_abs == diag_time, 1);
+if ~isempty(rf) && ~isempty(S.rectified_frames{rf})
+    bg_rgb = ind2rgb(gray2ind(mat2gray(double(S.rectified_frames{rf})), 256), bone(256));
+    bgh = imagesc(axM, S.X, S.Y, bg_rgb);
+    set(bgh, 'AlphaData', 0.5)
+end
+colormap(axM, parula); clim(axM, [0 1])
+for k = 1:numel(D)
+    plot(axM, D(k).x, D(k).y, '-', 'Color', ccols(k,:), 'LineWidth', 1.5)
+    scatter(axM, D(k).x, D(k).y, 22, D(k).zeta, 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 0.3)
+    plot(axM, D(k).x([1 end]), D(k).y([1 end]), 'x', 'Color', ccols(k,:), 'MarkerSize', 8, 'LineWidth', 1.5)   % Fbr = 0 pad points
+    xr = D(k).x(2:end-1);  yr = D(k).y(2:end-1);  Fr = D(k).F(2:end-1);       % measured points carry the vectors
+    qi = 1:diag_vec_stride:numel(xr);
+    quiver(axM, xr(qi), yr(qi), diag_vec_scale*Fr(qi).*cos(D(k).dir(qi)), diag_vec_scale*Fr(qi).*sin(D(k).dir(qi)), 1, ...
+        'Color', [0 .3 0], 'LineWidth', 0.8, 'MaxHeadSize', 0.3)
+    [zq, iq] = unique(D(k).zeta);
+    xt = interp1(zq, D(k).x(iq), tick_z);  yt = interp1(zq, D(k).y(iq), tick_z);
+       for q = 1:numel(tick_z)                                    % zeta labels, just above the crest
+        text(axM, xt(q) + label_off, yt(q), sprintf('%.2g', tick_z(q)), 'FontSize', 8, 'Color', ccols(k,:), ...
+            'FontWeight','bold', 'HorizontalAlignment','center')
+    end
+    text(axM, max(D(k).x) + 2.5*label_off, mean(D(k).y), ...   % crest number + length, above the zeta labels
+        sprintf('#%d  L=%.0f m', k, D(k).L), 'FontSize', 9, 'Color', ccols(k,:), ...
+        'FontWeight','bold', 'HorizontalAlignment','center')
+end
+cb = colorbar(axM); cb.Label.String = '\zeta = s/L';
+axis(axM, 'equal'); grid(axM,'on'); box(axM,'on')
+allx = vertcat(D.x);  ally = vertcat(D.y);
+xlim(axM, [min(allx) max(allx)] + [-15 15]);  ylim(axM, [min(ally) max(ally)] + [-15 15]);
+xlabel(axM,'Cross-shore [m]'); ylabel(axM,'Alongshore [m]')
+title(axM, sprintf('Crests, normalized coordinate \\zeta (labels), F_{br} vectors (green) - %s', string(diag_time)))
+view(axM, [-90 90])
+
+% ---- profiles: x-axis reversed so zeta runs right to left, like the crests in the map ----
+axF = nexttile; hold(axF,'on')
+for k = 1:numel(D)
+    plot(axF, D(k).zeta, D(k).F, '-', 'Color', ccols(k,:), 'LineWidth', 1.8)
+end
+xlabel(axF,'\zeta = s/L'); ylabel(axF,'F_{br} [m s^{-2}]'); xlim(axF,[0 1]); grid(axF,'on'); box(axF,'on')
+set(axF, 'XDir', 'reverse')
+title(axF, 'F_{br}(\zeta)')
+
+axC = nexttile; hold(axC,'on')
+for k = 1:numel(D)
+    plot(axC, D(k).zmid, D(k).curl, '-o', 'Color', ccols(k,:), 'MarkerSize', 3, 'LineWidth', 1.2)
+end
+yline(axC, 0, 'k:')
+xlabel(axC,'\zeta = s/L'); ylabel(axC,'\nabla \times F_{br} [s^{-2}]'); xlim(axC,[0 1]); grid(axC,'on'); box(axC,'on')
+set(axC, 'XDir', 'reverse')
+title(axC, 'Along-crest curl(\zeta)')
+
+title(tl, 'Single-frame diagnostic: individual breaking waves in the normalized crest system', 'FontSize', 14)
+
+
+%% LOCAL FUNCTIONS
+
+function [crestID, s] = trace_crest_paths(x, y, max_link_dist)
+% TRACE_CREST_PATHS  Along-crest order for an unorganized (x,y) point cloud
+% that may contain several separate crests. Each point is chained to its
+% nearest not-yet-used neighbor; a crest ends where no neighbor lies within
+% max_link_dist, or where the nearest neighbor would reverse the direction of
+% travel already established along that crest. Each crest's arclength s is
+% oriented to increase with y.
+n       = numel(x);
+crestID = nan(n,1);
+s       = nan(n,1);
+visited = false(n,1);
+curID   = 0;
+
+while ~all(visited)
+    curID = curID + 1;
+    seed  = find(~visited, 1, 'first');
+    chain = seed;
+    visited(seed) = true;
+
+    for dir_sign = [1 -1]      % grow forward from the seed, then backward
+        cur     = seed;
+        run_dir = [];
+        while true
+            cand = find(~visited);
+            if isempty(cand); break; end
+            d = hypot(x(cand)-x(cur), y(cand)-y(cur));
+            [dmin, k] = min(d);
+            if dmin > max_link_dist; break; end
+            nxt  = cand(k);
+            step = [x(nxt)-x(cur), y(nxt)-y(cur)] / max(dmin, eps);
+            if ~isempty(run_dir) && dot(step, run_dir) < 0
+                break   % next nearest point is back the way we came -- crest end
+            end
+            run_dir = step;
+            if dir_sign == 1
+                chain = [chain; nxt];
+            else
+                chain = [nxt; chain];
+            end
+            visited(nxt) = true;
+            cur = nxt;
+        end
+    end
+
+    if y(chain(1)) > y(chain(end))
+        chain = flipud(chain);   % keep s increasing with y
+    end
+
+    cx  = x(chain); cy = y(chain);
+    arc = [0; cumsum(hypot(diff(cx), diff(cy)))];
+    crestID(chain) = curID;
+    s(chain)       = arc;
+end
+end
